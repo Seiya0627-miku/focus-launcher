@@ -776,16 +776,16 @@ class FocusLauncher {
         const actionsGrid = document.getElementById('quick-actions-grid');
         actionsGrid.innerHTML = '';
 
-        for (const action of actions) {
-            const actionCard = document.createElement('a');
-            actionCard.href = action.url;
-            actionCard.target = '_blank';
+        for (let i = 0; i < actions.length; i++) {
+            const action = actions[i];
+            const actionCard = document.createElement('div'); // aタグからdivタグに変更
             actionCard.className = 'action-card';
             
             // ファビコンを取得
             const faviconUrl = await this.getFavicon(action.url);
             
             actionCard.innerHTML = `
+                <button class="remove-button" data-index="${i}" title="このアプリを削除">✕</button>
                 <div class="action-icon">
                     ${faviconUrl ? `<img src="${faviconUrl}" alt="${action.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width: 24px; height: 24px; border-radius: 4px;">` : ''}
                     <span style="display: ${faviconUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; width: 100%; height: 100%;">${action.icon}</span>
@@ -794,8 +794,43 @@ class FocusLauncher {
                 <div class="action-description">${action.description}</div>
             `;
 
+            // 削除ボタンのイベントリスナーを追加
+            const removeButton = actionCard.querySelector('.remove-button');
+            removeButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.removeAction(i);
+            });
+
+            // カード全体のクリックイベント（リンクとして機能）
+            actionCard.addEventListener('click', (e) => {
+                // 削除ボタンがクリックされた場合はリンクを開かない
+                if (e.target.classList.contains('remove-button')) {
+                    return;
+                }
+                window.open(action.url, '_blank');
+            });
+
             actionsGrid.appendChild(actionCard);
         }
+    }
+
+    // アプリを削除するメソッド
+    removeAction(index) {
+        if (!this.currentWorkflow || !this.currentWorkflow.aiContent || !this.currentWorkflow.aiContent.actions) {
+            return;
+        }
+
+        // 指定されたインデックスのアクションを削除
+        const removedAction = this.currentWorkflow.aiContent.actions.splice(index, 1)[0];
+
+        // ストレージに保存
+        chrome.storage.local.set({ currentWorkflow: this.currentWorkflow });
+
+        // ホーム画面を更新
+        this.updateHomeScreen();
+
+        console.log(`アクション「${removedAction.title}」を削除しました`);
     }
 
     async getFavicon(url) {
