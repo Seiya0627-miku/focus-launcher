@@ -209,7 +209,7 @@ class FocusLauncher {
 注意事項：
 - 既存のツールはurl含めて原則変更しないでください（例：https://slides.google.comをhttps://docs.google.com/presentation/に変更しないでください）
 - 削除要求があれば該当ツールを除外してください
-- 追加要求があれば新しいツールを追加してください
+- 追加要求があれば、既存のjsonの後ろに新しいツールの情報を追加してください
 - 重複は避けてください
 - 実用的で関連性の高いツールを提案してください
 - 論文を広く調べる必要がある場合はPaperDive（https://www.paperdive.app/）を必ず含める
@@ -802,13 +802,13 @@ class FocusLauncher {
         try {
             const domain = new URL(url).hostname;
             // Google Workspaceのツール用の特別処理
-            if (url === 'https://docs.google.com/') {
+            if (domain === 'docs.google.com') {
                 return 'https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico';
-            } else if (url === 'https://slides.google.com/') {
+            } else if (domain === 'slides.google.com') {
                 return 'https://ssl.gstatic.com/docs/presentations/images/favicon-2023q4.ico';
-            } else if (url === 'https://sheets.google.com/') {
+            } else if (domain === 'sheets.google.com') {
                 return 'https://ssl.gstatic.com/docs/spreadsheets/spreadsheets_2023q4.ico';
-            } else if (url === 'https://drive.google.com/') {
+            } else if (domain === 'drive.google.com') {
                 return 'https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png';
             }
             
