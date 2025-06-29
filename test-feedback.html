@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Launcher - 修正要求テスト</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #5a6fd8;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+        .action-card {
+            display: inline-block;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 5px;
+            text-decoration: none;
+            color: #333;
+            min-width: 120px;
+            text-align: center;
+        }
+        .action-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        .action-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .action-description {
+            font-size: 12px;
+            color: #666;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Focus Launcher - 修正要求テスト</h1>
+        
+        <div class="test-section">
+            <h3>1. ワークフロー開始テスト</h3>
+            <textarea id="workflow-input" placeholder="作業目的を入力してください（例：研究計画書を書く）" rows="3"></textarea>
+            <button onclick="startWorkflow()" id="start-btn">
+                <span id="start-loading" class="loading" style="display: none;"></span>
+                ワークフロー開始
+            </button>
+            <div id="workflow-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. 修正要求テスト</h3>
+            <textarea id="feedback-input" placeholder="修正要求を入力してください（例：Google Slidesを追加して）" rows="3"></textarea>
+            <button onclick="submitFeedback()" id="feedback-btn">
+                <span id="feedback-loading" class="loading" style="display: none;"></span>
+                修正要求送信
+            </button>
+            <button onclick="clearFeedback()">クリア</button>
+            <div id="feedback-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. 現在のワークフロー状態</h3>
+            <button onclick="showCurrentWorkflow()">現在の状態を表示</button>
+            <button onclick="clearWorkflow()">ワークフロー終了</button>
+            <div id="current-state" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. アクション表示テスト</h3>
+            <div id="actions-display"></div>
+        </div>
+    </div>
+
+    <script>
+        // モックのFocusLauncherクラス
+        class MockFocusLauncher {
+            constructor() {
+                this.currentWorkflow = null;
+                this.loadCurrentWorkflow();
+            }
+
+            // ローカルストレージを使用（Chrome拡張機能APIの代替）
+            async setStorage(data) {
+                localStorage.setItem('currentWorkflow', JSON.stringify(data));
+            }
+
+            async getStorage() {
+                const data = localStorage.getItem('currentWorkflow');
+                return data ? { currentWorkflow: JSON.parse(data) } : {};
+            }
+
+            async removeStorage() {
+                localStorage.removeItem('currentWorkflow');
+            }
+
+            async loadCurrentWorkflow() {
+                try {
+                    const result = await this.getStorage();
+                    console.log('ストレージから取得したデータ:', result);
+                    
+                    if (result.currentWorkflow && result.currentWorkflow.text) {
+                        this.currentWorkflow = result.currentWorkflow;
+                        console.log('既存のワークフローを復元しました:', this.currentWorkflow.text);
+                        this.displayActions();
+                    } else {
+                        console.log('新しいワークフローを開始します');
+                    }
+                } catch (error) {
+                    console.error('ワークフローの読み込みに失敗しました:', error);
+                }
+            }
+
+            async startWorkflow() {
+                const workflowText = document.getElementById('workflow-input').value.trim();
+                
+                if (!workflowText) {
+                    alert('作業目的を入力してください');
+                    return;
+                }
+
+                this.showLoading('start');
+
+                try {
+                    // モックAIレスポンスを生成
+                    const aiResponse = this.generateMockAIResponse(workflowText);
+                    
+                    this.currentWorkflow = {
+                        text: workflowText,
+                        timestamp: Date.now(),
+                        aiContent: aiResponse
+                    };
+
+                    // ストレージに保存
+                    await this.setStorage(this.currentWorkflow);
+
+                    this.hideLoading('start');
+                    this.displayWorkflowResult();
+                    this.displayActions();
+
+                    console.log('新しいワークフローを開始しました:', workflowText);
+
+                } catch (error) {
+                    console.error('ワークフローの開始に失敗しました:', error);
+                    alert('ワークフローの開始に失敗しました。もう一度お試しください。');
+                    this.hideLoading('start');
+                }
+            }
+
+            async submitFeedback() {
+                const feedbackText = document.getElementById('feedback-input').value.trim();
+                
+                if (!feedbackText) {
+                    alert('修正要求を入力してください');
+                    return;
+                }
+
+                if (!this.currentWorkflow) {
+                    alert('まずワークフローを開始してください');
+                    return;
+                }
+
+                // ワークフロー終了の要求かチェック
+                if (feedbackText.toLowerCase().includes('ワークフローを終了') || 
+                    feedbackText.toLowerCase().includes('終了') ||
+                    feedbackText.toLowerCase().includes('やめる')) {
+                    this.clearWorkflow();
+                    return;
+                }
+
+                this.showLoading('feedback');
+
+                try {
+                    console.log('修正要求を受信:', feedbackText);
+
+                    // 修正要求を処理
+                    const updatedActions = await this.processFeedbackRequest(feedbackText);
+                    
+                    console.log('更新されたアクション:', updatedActions);
+                    
+                    // 既存のAIコンテンツを更新
+                    const updatedAiContent = {
+                        ...this.currentWorkflow.aiContent,
+                        actions: updatedActions
+                    };
+                    
+                    this.currentWorkflow = {
+                        text: this.currentWorkflow.text,
+                        timestamp: Date.now(),
+                        aiContent: updatedAiContent,
+                        feedback: feedbackText
+                    };
+
+                    // ストレージに保存
+                    await this.setStorage(this.currentWorkflow);
+
+                    this.hideLoading('feedback');
+                    this.displayFeedbackResult();
+                    this.displayActions();
+
+                    // フィードバックテキストエリアをクリア
+                    document.getElementById('feedback-input').value = '';
+
+                    console.log('修正要求を処理しました:', feedbackText);
+
+                } catch (error) {
+                    console.error('修正要求の処理に失敗しました:', error);
+                    alert('修正要求の処理に失敗しました。もう一度お試しください。');
+                    this.hideLoading('feedback');
+                }
+            }
+
+            async processFeedbackRequest(feedbackText) {
+                const existingActions = this.currentWorkflow.aiContent.actions;
+                console.log('既存のアクション:', existingActions);
+                
+                // 削除要求をチェック
+                const removeRequests = this.extractRemoveRequests(feedbackText);
+                console.log('削除要求:', removeRequests);
+                
+                let filteredActions = existingActions.filter(action => 
+                    !removeRequests.some(remove => 
+                        action.title.toLowerCase().includes(remove.toLowerCase()) ||
+                        action.description.toLowerCase().includes(remove.toLowerCase())
+                    )
+                );
+
+                console.log('削除後のアクション:', filteredActions);
+
+                // 追加要求を処理
+                const addRequests = this.extractAddRequests(feedbackText);
+                console.log('追加要求:', addRequests);
+                
+                if (addRequests.length > 0) {
+                    const newActions = await this.generateAdditionalActions(addRequests);
+                    console.log('新しく追加されるアクション:', newActions);
+                    filteredActions = [...filteredActions, ...newActions];
+                }
+
+                return filteredActions;
+            }
+
+            extractRemoveRequests(feedbackText) {
+                const removeKeywords = ['削除', '削って', '取り除いて', '不要', 'いらない', '消して'];
+                const words = feedbackText.split(/[、。\s]+/);
+                return words.filter(word => 
+                    removeKeywords.some(keyword => word.includes(keyword))
+                );
+            }
+
+            extractAddRequests(feedbackText) {
+                const addKeywords = ['追加', '加えて', '入れて', '含めて', '増やして'];
+                const words = feedbackText.split(/[、。\s]+/);
+                return words.filter(word => 
+                    addKeywords.some(keyword => word.includes(keyword))
+                );
+            }
+
+            async generateAdditionalActions(requests) {
+                const additionalActions = [];
+                
+                for (const request of requests) {
+                    if (request.includes('Google') || request.includes('グーグル')) {
+                        if (request.includes('Docs') || request.includes('ドキュメント')) {
+                            additionalActions.push({
+                                title: 'Google Docs',
+                                description: '文書作成',
+                                url: 'https://docs.google.com',
+                                icon: '📄'
+                            });
+                        } else if (request.includes('Slides') || request.includes('プレゼン')) {
+                            additionalActions.push({
+                                title: 'Google Slides',
+                                description: 'プレゼンテーション',
+                                url: 'https://slides.google.com',
+                                icon: '📊'
+                            });
+                        } else if (request.includes('Sheets') || request.includes('スプレッド')) {
+                            additionalActions.push({
+                                title: 'Google Sheets',
+                                description: 'スプレッドシート',
+                                url: 'https://sheets.google.com',
+                                icon: '📈'
+                            });
+                        }
+                    } else if (request.includes('ChatGPT') || request.includes('chatgpt')) {
+                        additionalActions.push({
+                            title: 'ChatGPT',
+                            description: 'AIアシスタント',
+                            url: 'https://chat.openai.com',
+                            icon: '🤖'
+                        });
+                    } else if (request.includes('Notion') || request.includes('notion')) {
+                        additionalActions.push({
+                            title: 'Notion',
+                            description: 'ノート・プロジェクト管理',
+                            url: 'https://www.notion.so',
+                            icon: '📝'
+                        });
+                    } else if (request.includes('Slack') || request.includes('slack')) {
+                        additionalActions.push({
+                            title: 'Slack',
+                            description: 'チームコミュニケーション',
+                            url: 'https://slack.com',
+                            icon: '💬'
+                        });
+                    } else if (request.includes('Zoom') || request.includes('zoom')) {
+                        additionalActions.push({
+                            title: 'Zoom',
+                            description: 'オンライン会議',
+                            url: 'https://zoom.us',
+                            icon: '📹'
+                        });
+                    }
+                }
+                
+                return additionalActions;
+            }
+
+            generateMockAIResponse(workflowText) {
+                return {
+                    title: 'テストワークフロー',
+                    content: '<p>テスト用のワークフローです。</p>',
+                    actions: [
+                        {
+                            title: 'Google Docs',
+                            description: '文書作成',
+                            url: 'https://docs.google.com',
+                            icon: '📄'
+                        },
+                        {
+                            title: 'GitHub',
+                            description: 'コード管理',
+                            url: 'https://github.com',
+                            icon: '💻'
+                        }
+                    ]
+                };
+            }
+
+            showLoading(type) {
+                const loadingElement = document.getElementById(`${type}-loading`);
+                const button = document.getElementById(`${type}-btn`);
+                if (loadingElement && button) {
+                    loadingElement.style.display = 'inline-block';
+                    button.disabled = true;
+                }
+            }
+
+            hideLoading(type) {
+                const loadingElement = document.getElementById(`${type}-loading`);
+                const button = document.getElementById(`${type}-btn`);
+                if (loadingElement && button) {
+                    loadingElement.style.display = 'none';
+                    button.disabled = false;
+                }
+            }
+
+            displayWorkflowResult() {
+                const resultDiv = document.getElementById('workflow-result');
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+                    <strong>ワークフロー開始成功！</strong><br>
+                    テキスト: ${this.currentWorkflow.text}<br>
+                    タイムスタンプ: ${new Date(this.currentWorkflow.timestamp).toLocaleString()}
+                `;
+            }
+
+            displayFeedbackResult() {
+                const resultDiv = document.getElementById('feedback-result');
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+                    <strong>修正要求処理成功！</strong><br>
+                    フィードバック: ${this.currentWorkflow.feedback}<br>
+                    アクション数: ${this.currentWorkflow.aiContent.actions.length}個
+                `;
+            }
+
+            displayActions() {
+                const actionsDiv = document.getElementById('actions-display');
+                if (!this.currentWorkflow) {
+                    actionsDiv.innerHTML = '<p>ワークフローが開始されていません</p>';
+                    return;
+                }
+                
+                actionsDiv.innerHTML = '<h4>現在のアクション:</h4>';
+                
+                this.currentWorkflow.aiContent.actions.forEach(action => {
+                    const actionCard = document.createElement('div');
+                    actionCard.className = 'action-card';
+                    actionCard.innerHTML = `
+                        <div class="action-icon">${action.icon}</div>
+                        <div class="action-title">${action.title}</div>
+                        <div class="action-description">${action.description}</div>
+                    `;
+                    actionsDiv.appendChild(actionCard);
+                });
+            }
+
+            async clearWorkflow() {
+                this.currentWorkflow = null;
+                await this.removeStorage();
+                
+                document.getElementById('workflow-result').style.display = 'none';
+                document.getElementById('feedback-result').style.display = 'none';
+                document.getElementById('current-state').style.display = 'none';
+                document.getElementById('actions-display').innerHTML = '<p>ワークフローが開始されていません</p>';
+                
+                alert('ワークフローを終了しました');
+            }
+
+            async showCurrentWorkflow() {
+                const result = await this.getStorage();
+                const stateDiv = document.getElementById('current-state');
+                stateDiv.style.display = 'block';
+                
+                if (result.currentWorkflow) {
+                    stateDiv.innerHTML = `
+                        <strong>現在のワークフロー:</strong><br>
+                        テキスト: ${result.currentWorkflow.text}<br>
+                        タイムスタンプ: ${new Date(result.currentWorkflow.timestamp).toLocaleString()}<br>
+                        アクション数: ${result.currentWorkflow.aiContent.actions.length}個
+                    `;
+                    this.currentWorkflow = result.currentWorkflow;
+                    this.displayActions();
+                } else {
+                    stateDiv.innerHTML = '<strong>ワークフローは開始されていません</strong>';
+                }
+            }
+        }
+
+        // グローバル変数
+        let mockLauncher;
+
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            mockLauncher = new MockFocusLauncher();
+        });
+
+        // グローバル関数
+        function startWorkflow() {
+            mockLauncher.startWorkflow();
+        }
+
+        function submitFeedback() {
+            mockLauncher.submitFeedback();
+        }
+
+        function clearFeedback() {
+            document.getElementById('feedback-input').value = '';
+            document.getElementById('feedback-result').style.display = 'none';
+        }
+
+        function showCurrentWorkflow() {
+            mockLauncher.showCurrentWorkflow();
+        }
+
+        function clearWorkflow() {
+            mockLauncher.clearWorkflow();
+        }
+    </script>
+</body>
+</html> 

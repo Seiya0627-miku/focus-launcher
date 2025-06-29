@@ -1,0 +1,15 @@
+/* Focus Launcher - コンテンツスクリプト用スタイル */
+
+/* ブックマークバーを隠す */
+#bookmarksBar,
+.bookmarks-bar,
+[data-testid="bookmarks-bar"],
+.bookmark-bar {
+    display: none !important;
+}
+
+/* Chromeのブックマークバーを隠す */
+#bookmarksBar,
+#bookmarksBarContainer {
+    display: none !important;
+} 

@@ -1,0 +1,23 @@
+# APIキーが含まれる設定ファイル
+config.js
+
+# 一般的な除外ファイル
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE設定
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 一時ファイル
+*.tmp
+*.temp 

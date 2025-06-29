@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Launcher</title>
+    <link rel="stylesheet" href="newtab.css">
+</head>
+<body>
+    <div id="app">
+        <!-- ワークフロー入力画面 -->
+        <div id="workflow-input" class="workflow-container">
+            <div class="workflow-content">
+                <h1>Focus Launcher</h1>
+                <p>今日の作業目的を教えてください</p>
+                <div class="input-container">
+                    <textarea 
+                        id="workflow-textarea" 
+                        placeholder="例：研究計画書を書いて、関連文献を調べる"
+                        rows="3"
+                    ></textarea>
+                    <button id="start-workflow" class="primary-button">
+                        作業を開始
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ホーム画面 -->
+        <div id="home-screen" class="home-container hidden">
+            <div class="header">
+                <h2 id="current-workflow-title">作業中</h2>
+                <button id="end-workflow" class="secondary-button">
+                    ワークフローを終了
+                </button>
+            </div>
+            
+            <div class="content-area">
+                <div id="ai-generated-content" class="ai-content">
+                    <!-- AIが生成したコンテンツがここに表示される -->
+                </div>
+                
+                <div class="quick-actions">
+                    <h3>よく使うツール</h3>
+                    <div id="quick-actions-grid" class="actions-grid">
+                        <!-- 動的に生成されるアクション -->
+                    </div>
+                </div>
+
+                <!-- ユーザー修正要求セクション -->
+                <div class="user-feedback-section">
+                    <h3>📝 ツールの追加・修正</h3>
+                    <p>必要なツールが不足している場合や、追加したいツールがあれば教えてください。</p>
+                    <div class="feedback-input-container">
+                        <textarea 
+                            id="feedback-textarea" 
+                            placeholder="例：Google Slidesを追加して、プレゼンテーション作成をサポートしてほしい"
+                            rows="2"
+                        ></textarea>
+                        <div class="feedback-buttons">
+                            <button id="submit-feedback" class="primary-button">
+                                修正要求を送信
+                            </button>
+                            <button id="end-workflow-feedback" class="secondary-button">
+                                ワークフローを終了
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ローディング画面 -->
+        <div id="loading-screen" class="loading-container hidden">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p>AIがあなたの作業に最適な環境を準備中...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="newtab.js"></script>
+</body>
+</html> 

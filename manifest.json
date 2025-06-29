@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Focus Launcher",
+  "version": "1.0.0",
+  "description": "研究用PCでの集中作業をサポートするブラウザ拡張機能",
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["popup.html", "popup.js", "popup.css", "config.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Focus Launcher"
+  },
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  }
+} 

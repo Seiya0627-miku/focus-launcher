@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Launcher</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <div class="header">
+            <h1>Focus Launcher</h1>
+            <div id="status-indicator" class="status-indicator">
+                <span id="status-text">未設定</span>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div id="current-workflow-info" class="workflow-info hidden">
+                <h3>現在のワークフロー</h3>
+                <p id="workflow-description"></p>
+                <button id="end-workflow-btn" class="secondary-button">
+                    ワークフローを終了
+                </button>
+            </div>
+            
+            <div id="no-workflow-info" class="no-workflow-info">
+                <p>現在アクティブなワークフローはありません。</p>
+                <p>新しいタブを開いて作業を開始してください。</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <button id="new-tab-btn" class="primary-button">
+                新しいタブを開く
+            </button>
+        </div>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html> 
