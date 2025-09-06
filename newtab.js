@@ -214,11 +214,10 @@ class FocusLauncher {
 - 実用的で関連性の高いツールを提案してください
 - 論文を広く調べる必要がある場合はPaperDive（https://www.paperdive.app/）を必ず含める
 - Google Driveは常に含める（ファイル管理のため）
-- Google Workspaceツール（Docs、Slides、Sheets、Drive）は以下のURL形式で統一してください：
+- Google Workspaceツール（Docs、Slides、Sheets、Drive、Mailなど）は以下のURL形式で統一してください：
   * Google Docs: https://docs.google.com
   * Google Slides: https://slides.google.com
-  * Google Sheets: https://sheets.google.com
-  * Google Drive: https://drive.google.com
+  * その他についても以上と同様にしてください
 - ツール名はそのまま表示し、余計な情報（「構成検討」など）は付けないでください
 `;
 
@@ -845,6 +844,8 @@ class FocusLauncher {
                 return 'https://ssl.gstatic.com/docs/spreadsheets/spreadsheets_2023q4.ico';
             } else if (domain === 'drive.google.com') {
                 return 'https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png';
+            } else if (domain === 'mail.google.com') {
+                return 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Gmail_icon_%282020%29.svg';
             }
             
             // その他のサイトは通常のGoogleファビコンAPIを使用

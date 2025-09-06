@@ -381,4 +381,9 @@ body {
         flex: none;
         width: 100%;
     }
+}
+
+/* 追加: 万一footer要素が存在しても新しいタブでは非表示にする */
+footer {
+    display: none !important;
 } 
