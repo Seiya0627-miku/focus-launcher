@@ -11,14 +11,8 @@ class PopupManager {
     }
 
     bindEvents() {
-        // 新しいタブを開くボタン
-        document.getElementById('new-tab-btn').addEventListener('click', () => {
-            chrome.tabs.create({ url: 'chrome://newtab/' });
-            window.close();
-        });
-
         // ワークフロー終了ボタン
-        document.getElementById('end-workflow-btn').addEventListener('click', async () => {
+        document.getElementById("end-workflow-btn").addEventListener("click", async () => {
             await this.endWorkflow();
         });
     }
@@ -41,8 +35,8 @@ class PopupManager {
     showActiveWorkflow(workflow) {
         // ステータスを更新
         document.getElementById('status-text').textContent = 'アクティブ';
-        document.getElementById('status-indicator').style.background = 'rgba(34, 197, 94, 0.2)';
-        document.getElementById('status-text').style.color = '#22c55e';
+        document.getElementById('status-indicator').style.background = 'rgb(44, 169, 90)';
+        document.getElementById('status-text').style.color = '#ffffff';
 
         // ワークフロー情報を表示
         document.getElementById('workflow-description').textContent = workflow.text;
