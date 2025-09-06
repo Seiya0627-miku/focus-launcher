@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Launcher - 実験へのご参加</title>
+    <link rel="stylesheet" href="consent-screen.css">
+</head>
+<body>
+    <div id="consent-screen" class="consent-container">
+        <div class="consent-content">
+            <div class="header">
+                <h1>Focus Launcher</h1>
+                <p class="subtitle">実験へのご参加ありがとうございます</p>
+            </div>
+            
+            <div class="consent-section">
+                <h2>データ収集について</h2>
+                <p>この実験では以下のデータを収集します：</p>
+                <ul>
+                    <li>作業目的の入力内容</li>
+                    <li>ツールの使用状況とアクセスしたWebサイト</li>
+                    <li>使用時間とタブの遷移状況</li>
+                    <li>ホーム画面の修正要求</li>
+                </ul>
+            </div>
+            
+            <div class="consent-section">
+                <h2>プライバシー保護</h2>
+                <ul>
+                    <li>個人を特定できる情報は収集しません</li>
+                    <li>データは匿名化して保存されます</li>
+                    <li>アクセスしたURLのドメインのみ記録します</li>
+                    <li>実験終了後、データは適切に管理されます</li>
+                </ul>
+            </div>
+            
+            <div class="consent-section">
+                <h2>参加の任意性</h2>
+                <ul>
+                    <li>参加は完全に任意です</li>
+                    <li>いつでも実験を中止できます</li>
+                    <li>データの削除を要求できます</li>
+                    <li>質問があればお気軽にお尋ねください</li>
+                </ul>
+            </div>
+            
+            <div class="consent-section">
+                <h2>実験ID</h2>
+                <p>あなたの実験ID: <span id="experiment-id" class="experiment-id">生成中...</span></p>
+                <p class="note">このIDは実験データの管理に使用されます</p>
+            </div>
+            
+            <div class="consent-actions">
+                <button id="consent-agree" class="primary-button">
+                    同意して利用を開始する
+                </button>
+            </div>
+            
+            <div class="footer">
+                <p class="disclaimer">この実験は研究目的で実施されています。ご協力いただき、ありがとうございます。</p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="consent-screen.js"></script>
+</body>
+</html>

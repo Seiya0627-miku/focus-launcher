@@ -4,11 +4,12 @@ class FocusLauncher {
         this.currentWorkflow = null;
         this.isRefreshing = false;
         this.init();
+        this.setupMessageListener();
     }
 
     init() {
         this.bindEvents();
-        this.loadCurrentWorkflow();
+        this.checkFirstTimeUser();
     }
 
     bindEvents() {
@@ -922,6 +923,99 @@ class FocusLauncher {
                 fallbackDiv.parentNode.removeChild(fallbackDiv);
             }
         }, 5000);
+    }
+
+    // 初回利用チェック
+    async checkFirstTimeUser() {
+        try {
+            console.log('初回利用チェックを開始...');
+            
+            // Runtime の接続確認
+            if (!chrome.runtime) {
+                console.error('chrome.runtime が利用できません');
+                this.loadCurrentWorkflow();
+                return;
+            }
+        
+            const response = await chrome.runtime.sendMessage({
+                action: 'checkFirstTimeUser'
+            });
+            
+            // レスポンスが undefined または null の場合の処理
+            if (!response || typeof response !== 'object') {
+                console.error('Background script からの応答が無効です:', response);
+                console.log('フォールバックとして直接ストレージをチェックします');
+                
+                // フォールバック: 直接ストレージをチェック
+                const fallbackResult = await chrome.storage.local.get(['experimentId', 'consentGiven']);
+                console.log('直接取得したストレージデータ:', fallbackResult);
+                
+                const isFirstTime = !fallbackResult.experimentId || !fallbackResult.consentGiven;
+                if (isFirstTime) {
+                    this.showConsentScreen();
+                } else {
+                    this.loadCurrentWorkflow();
+                }
+                return;
+            }
+            
+            if (response.error) {
+                console.error('Background script でエラーが発生:', response.error);
+                this.loadCurrentWorkflow();
+                return;
+            }
+            
+            if (response.isFirstTime) {
+                console.log('初回利用です。確認画面を表示します。');
+                this.showConsentScreen();
+            } else {
+                console.log('既存ユーザーです。ワークフローを読み込みます。');
+                this.loadCurrentWorkflow();
+            }
+        } catch (error) {
+            console.error('初回利用チェックに失敗しました:', error);
+            
+            // エラーが runtime の接続問題の場合
+            if (error.message && error.message.includes('Extension context invalidated')) {
+                console.log('拡張機能のコンテキストが無効化されています。ページをリロードしてください。');
+                location.reload();
+                return;
+            }
+            
+            // その他のエラーの場合はフォールバック
+            console.log('フォールバックとして既存ユーザー処理を実行します');
+            this.loadCurrentWorkflow();
+        }
+    }
+
+    // 確認画面を表示
+    showConsentScreen() {
+        // 現在のコンテンツを隠す
+        document.getElementById('app').style.display = 'none';
+        
+        // 確認画面を表示
+        const consentFrame = document.createElement('iframe');
+        consentFrame.src = chrome.runtime.getURL('consent-screen.html');
+        consentFrame.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            z-index: 10000;
+        `;
+        document.body.appendChild(consentFrame);
+    }
+
+    // メッセージリスナーを追加
+    setupMessageListener() {
+        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+            console.log('メッセージを受信:', request);
+            if (request.action === 'showConsentScreen') {
+                this.showConsentScreen();
+            }
+        });
     }
 }
 

@@ -8,6 +8,7 @@ class PopupManager {
     async init() {
         this.bindEvents();
         await this.updateUI();
+        await this.showExperimentId();
     }
 
     bindEvents() {
@@ -67,10 +68,24 @@ class PopupManager {
             
             // ポップアップのUIを更新
             await this.updateUI();
+        await this.showExperimentId();
             
         } catch (error) {
             console.error('ワークフロー終了に失敗しました:', error);
             alert('ワークフロー終了に失敗しました。');
+        }
+    }
+
+    // 実験IDを表示
+    async showExperimentId() {
+        try {
+            const result = await chrome.storage.local.get(['experimentId']);
+            if (result.experimentId) {
+                document.getElementById('experiment-id').textContent = result.experimentId;
+                document.getElementById('experiment-id-display').classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('実験IDの取得に失敗しました:', error);
         }
     }
 }
