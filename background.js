@@ -1,9 +1,7 @@
 // Focus Launcher - バックグラウンドスクリプト
 
 // 拡張機能のインストール時の処理
-chrome.runtime.onInstalled.addListener(() => {
-    console.log('Focus Launcher がインストールされました');
-    
+chrome.runtime.onInstalled.addListener(() => { 
     // 初期設定
     chrome.storage.local.set({
         isFirstRun: true,
@@ -13,15 +11,13 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // 初回利用判別
 async function checkFirstTimeUser() {
-    console.log('checkFirstTimeUser 関数が実行されました');
+    // console.log('checkFirstTimeUser 関数が実行されました');
     try {
         const result = await chrome.storage.local.get(['experimentId', 'consentGiven']);
-        console.log('ストレージから取得したデータ:', result);
+        // console.log('ストレージから取得したデータ:', result);
         
         const isFirstTime = !result.experimentId || !result.consentGiven;
         const experimentId = result.experimentId || null;
-        
-        console.log('初回利用判定結果:', { isFirstTime, experimentId });
         
         return {
             isFirstTime: isFirstTime,
@@ -53,28 +49,6 @@ async function completeFirstTimeSetup(experimentId) {
     });
 }
 
-// タブが更新されたときの処理
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && tab.url === 'chrome://newtab/') {
-        // 初回利用チェック
-        const { isFirstTime, experimentId } = await checkFirstTimeUser();
-        console.log('初回利用チェック:', isFirstTime);
-        if (isFirstTime) {
-            // 初回利用の場合は確認画面を表示するようメッセージを送信
-            chrome.tabs.sendMessage(tabId, {
-                action: 'showConsentScreen'
-            });
-        } else {
-            // 既存ユーザーの場合は通常のワークフローを確認
-            chrome.storage.local.get(['currentWorkflow'], (result) => {
-                if (result.currentWorkflow) {
-                    console.log('進行中のワークフローがあります:', result.currentWorkflow.text);
-                }
-            });
-        }
-    }
-});
-
 // ブラウザが閉じられるときの処理
 chrome.runtime.onSuspend.addListener(() => {
     // ブラウザが閉じられるときにワークフローをクリア
@@ -85,8 +59,6 @@ chrome.runtime.onSuspend.addListener(() => {
 
 // メッセージの処理
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('Background script がメッセージを受信:', request);
-    
     if (request.action === 'getCurrentWorkflow') {
         chrome.storage.local.get(['currentWorkflow'], (result) => {
             sendResponse({ workflow: result.currentWorkflow });
@@ -109,8 +81,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     
     if (request.action === 'checkFirstTimeUser') {
-        console.log('checkFirstTimeUser メッセージを処理中...');
-        
         // 非同期処理を Promise として扱う
         checkFirstTimeUser()
             .then(result => {
