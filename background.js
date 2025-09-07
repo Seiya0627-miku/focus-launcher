@@ -49,6 +49,17 @@ async function completeFirstTimeSetup(experimentId) {
     });
 }
 
+// データリセット
+async function resetUserData() {
+    try {
+        await chrome.storage.local.clear();
+        console.log('ユーザーデータをリセットしました');
+    } catch (error) {
+        console.error('データリセットに失敗しました:', error);
+        throw error;
+    }
+}
+
 // ブラウザが閉じられるときの処理
 chrome.runtime.onSuspend.addListener(() => {
     // ブラウザが閉じられるときにワークフローをクリア
@@ -118,7 +129,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         return true;
     }
-    
+
+    if (request.action === 'resetUserData') {
+        resetUserData().then(() => {
+            sendResponse({ success: true });
+        }).catch(error => {
+            console.error('データリセットエラー:', error);
+            sendResponse({ success: false, error: error.message });
+        });
+        return true;
+    }
 
     // 未知のアクションに対する警告
     console.warn('未知のアクション:', request.action);
@@ -142,3 +162,4 @@ setInterval(() => {
         }
     });
 }, 60 * 60 * 1000); // 1時間ごとにチェック
+
