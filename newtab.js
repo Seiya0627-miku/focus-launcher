@@ -628,10 +628,27 @@ class FocusLauncher {
     }
 
     async generateHomeScreen(workflowText) {
+        // ブックマークを取得
+        const bookmarks = await this.getBookmarks();
+        
+        // プロンプトにブックマーク情報を追加
+        let bookmarkContext = '';
+        if (bookmarks.length > 0) {
+            bookmarkContext = `\n\n関連するブックマーク（優先的に活用してください）:\n`;
+            bookmarks.forEach((bookmark, index) => {
+                bookmarkContext += `${index + 1}. ${bookmark.title}\n`;
+                bookmarkContext += `   URL: ${bookmark.url}\n`;
+                bookmarkContext += `   目的: ${bookmark.purpose}\n\n`;
+            });
+        }
+        
+        const prompt = CONFIG.PROMPT_TEMPLATE.replace('{workflow}', workflowText) + bookmarkContext;
+        
+
         // APIキーが設定されている場合はGemini APIを使用
         if (CONFIG.GEMINI_API_KEY) {
             try {
-                const result = await this.callGeminiAPI(workflowText);
+                const result = await this.callGeminiAPI(workflowText, prompt);
                 console.log('Gemini APIでワークフロー生成成功');
 
                 // ログを記録
@@ -656,8 +673,8 @@ class FocusLauncher {
         }
     }
 
-    async callGeminiAPI(workflowText) {
-        const prompt = CONFIG.PROMPT_TEMPLATE.replace('{workflow}', workflowText);
+    async callGeminiAPI(workflowText, customPrompt = null) {
+        const prompt = customPrompt || CONFIG.PROMPT_TEMPLATE.replace('{workflow}', workflowText);
         
         const requestBody = {
             contents: [{
@@ -905,6 +922,16 @@ class FocusLauncher {
         this.updateHomeScreen();
 
         console.log(`アクション「${removedAction.title}」を削除しました`);
+    }
+
+    async getBookmarks() {
+        try {
+            const result = await chrome.storage.local.get(['bookmarks']);
+            return result.bookmarks || [];
+        } catch (error) {
+            console.error('ブックマークの取得に失敗しました:', error);
+            return [];
+        }
     }
 
     async getFavicon(url) {

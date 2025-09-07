@@ -21,6 +21,11 @@ class PopupManager {
         document.getElementById("reset-data-btn").addEventListener("click", () => {
             this.showResetConfirmation();
         });
+
+        // ブックマークボタン
+        document.getElementById("bookmark-current-page").addEventListener("click", async () => {
+            await this.bookmarkCurrentPage();
+        });
     }
 
     async updateUI() {
@@ -124,6 +129,108 @@ class PopupManager {
         if (confirmed) {
             this.resetUserData();
         }
+    }
+
+    async bookmarkCurrentPage() {
+        try {
+            // 現在のワークフローを取得
+            const result = await chrome.storage.local.get(['currentWorkflow']);
+            const currentWorkflow = result.currentWorkflow;
+            
+            if (!currentWorkflow) {
+                alert('ワークフローが開始されていません。まず新しいタブでワークフローを開始してください。');
+                return;
+            }
+            
+            // 現在のタブ情報を取得
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            const currentTab = tabs[0];
+            
+            if (!currentTab || !currentTab.url) {
+                alert('ブックマークできるページがありません');
+                return;
+            }
+            
+            // 無効なURLをチェック
+            if (currentTab.url.startsWith('chrome://') || 
+                currentTab.url.startsWith('chrome-extension://') ||
+                currentTab.url.startsWith('about:')) {
+                alert('このページはブックマークできません');
+                return;
+            }
+            
+            // ブックマークデータを作成
+            const bookmark = {
+                id: `bookmark_${Date.now()}`,
+                url: currentTab.url,
+                title: currentTab.title || 'タイトルなし',
+                purpose: currentWorkflow.text, // ワークフローの目的を直接使用
+                createdAt: new Date().toISOString()
+            };
+            
+            // ブックマークを保存
+            await this.saveBookmark(bookmark);
+            
+            // 成功メッセージ
+            this.showBookmarkSuccessMessage(bookmark.title);
+            
+        } catch (error) {
+            console.error('ブックマークの保存に失敗しました:', error);
+            alert('ブックマークの保存に失敗しました');
+        }
+    }
+    
+    async saveBookmark(bookmark) {
+        try {
+            const result = await chrome.storage.local.get(['bookmarks']);
+            const bookmarks = result.bookmarks || [];
+            
+            // 重複チェック（同じURLと目的の組み合わせ）
+            const isDuplicate = bookmarks.some(existing => 
+                existing.url === bookmark.url && existing.purpose === bookmark.purpose
+            );
+            
+            if (isDuplicate) {
+                alert('同じ目的でこのページは既にブックマークされています');
+                return;
+            }
+            
+            bookmarks.push(bookmark);
+            
+            await chrome.storage.local.set({ bookmarks: bookmarks });
+            
+            // ログに記録
+            await chrome.runtime.sendMessage({
+                action: 'saveLog',
+                eventType: 'bookmark_created',
+                data: {
+                    bookmarkId: bookmark.id,
+                    url: bookmark.url,
+                    purpose: bookmark.purpose
+                }
+            });
+            
+            console.log('ブックマークを保存しました:', bookmark.title);
+            
+        } catch (error) {
+            console.error('ブックマーク保存エラー:', error);
+            throw error;
+        }
+    }
+    
+    showBookmarkSuccessMessage(title) {
+        // ポップアップ内で成功メッセージを表示
+        const statusText = document.getElementById('status-text');
+        const originalText = statusText.textContent;
+        
+        statusText.textContent = `✅ 「${title}」をブックマークしました`;
+        statusText.style.color = '#ffffff';
+        
+        // 3秒後に元に戻す
+        setTimeout(() => {
+            statusText.textContent = originalText;
+            statusText.style.color = '';
+        }, 3000);
     }
 
     // ユーザーデータをリセット

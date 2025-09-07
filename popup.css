@@ -176,3 +176,35 @@ body {
 .danger-button:active {
     transform: translateY(0);
 }
+
+.bookmark-button {
+    width: 100%;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    margin-top: 10px;
+}
+
+.bookmark-button:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.bookmark-button:active {
+    transform: translateY(0);
+}
+
+.bookmark-icon {
+    font-size: 1rem;
+}
