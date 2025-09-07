@@ -17,11 +17,19 @@
     "service_worker": "background.js"
   },
   "web_accessible_resources": [
-    {
-      "resources": ["popup.html", "popup.js", "popup.css", "config.js", "consent-screen.html", "consent-screen.css", "consent-screen.js"],
-      "matches": ["<all_urls>"]
-    }
-  ],
+  {
+    "resources": [
+      "popup.html", 
+      "popup.js", 
+      "popup.css", 
+      "config.js",
+      "consent-screen.html",
+      "consent-screen.css", 
+      "consent-screen.js"
+    ],
+    "matches": ["<all_urls>"]
+  }],
+
   "action": {
     "default_popup": "popup.html",
     "default_title": "Focus Launcher"

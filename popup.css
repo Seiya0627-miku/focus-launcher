@@ -101,8 +101,8 @@ body {
 
 .secondary-button {
     width: 100%;
-    background: #f1f5f9;
-    color: #64748b;
+    background: #8e8e8e;
+    color: #ffffff;
     border: 1px solid #e2e8f0;
     padding: 10px 20px;
     border-radius: 8px;
@@ -207,4 +207,24 @@ body {
 
 .bookmark-icon {
     font-size: 1rem;
+}
+
+.export-button {
+    width: 100%;
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 10px;
+}
+
+.export-button:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }

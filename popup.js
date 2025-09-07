@@ -17,14 +17,19 @@ class PopupManager {
             await this.endWorkflow();
         });
 
-        // データリセットボタン
-        document.getElementById("reset-data-btn").addEventListener("click", () => {
-            this.showResetConfirmation();
-        });
-
         // ブックマークボタン
         document.getElementById("bookmark-current-page").addEventListener("click", async () => {
             await this.bookmarkCurrentPage();
+        });
+
+        // データエクスポートボタン
+        document.getElementById("export-data-btn").addEventListener("click", async () => {
+            await this.exportExperimentData();
+        });
+
+        // データリセットボタン
+        document.getElementById("reset-data-btn").addEventListener("click", () => {
+            this.showResetConfirmation();
         });
     }
 
@@ -223,14 +228,67 @@ class PopupManager {
         const statusText = document.getElementById('status-text');
         const originalText = statusText.textContent;
         
-        statusText.textContent = `✅ 「${title}」をブックマークしました`;
+        statusText.textContent = `「${title}」をブックマークしました`;
         statusText.style.color = '#ffffff';
         
-        // 3秒後に元に戻す
+        // 2秒後に元に戻す
         setTimeout(() => {
             statusText.textContent = originalText;
             statusText.style.color = '';
-        }, 3000);
+        }, 2000);
+    }
+
+    async exportExperimentData() {
+        try {
+            // すべての実験データを取得
+            const result = await chrome.storage.local.get(null);
+            
+            // エクスポート用データを整理
+            const exportData = {
+                experimentId: result.experimentId,
+                consentGiven: result.consentGiven,
+                firstUsedAt: result.firstUsedAt,
+                currentWorkflow: result.currentWorkflow,
+                bookmarks: result.bookmarks || [],
+                logs: result.logs || [],
+                exportTimestamp: new Date().toISOString(),
+                exportVersion: "1.0.0"
+            };
+            
+            // JSONファイルとしてダウンロード
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `focus-launcher-data-${result.experimentId || 'unknown'}-${new Date().toISOString().split('T')[0]}.json`;
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            // 成功メッセージ
+            this.showExportSuccessMessage();
+            
+        } catch (error) {
+            console.error('データエクスポートに失敗しました:', error);
+            alert('データエクスポートに失敗しました。もう一度お試しください。');
+        }
+    }
+    
+    showExportSuccessMessage() {
+        const statusText = document.getElementById('status-text');
+        const originalText = statusText.textContent;
+        
+        statusText.textContent = '実験データをエクスポートしました';
+        statusText.style.color = '#10b981';
+        
+        setTimeout(() => {
+            statusText.textContent = originalText;
+            statusText.style.color = '';
+        }, 2000);
     }
 
     // ユーザーデータをリセット

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Launcher - データビューア</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #3b82f6;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .section-header {
+            background: #f1f5f9;
+            padding: 15px 20px;
+            font-weight: 600;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .section-content {
+            padding: 20px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .data-table th,
+        .data-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .data-table th {
+            background: #f8fafc;
+            font-weight: 600;
+        }
+        .json-viewer {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #3b82f6;
+        }
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        .file-input-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .file-input {
+            display: none;
+        }
+        .file-input-button {
+            background: white;
+            color: #3b82f6;
+            border: 2px solid white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .file-input-button:hover {
+            background: #f8fafc;
+            transform: translateY(-1px);
+        }
+        .no-data-message {
+            text-align: center;
+            color: #64748b;
+            font-style: italic;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Focus Launcher - データビューア</h1>
+            <p>実験データ可視化ツール</p>
+            
+            <div class="file-input-container">
+                <input type="file" id="json-file-input" class="file-input" accept=".json">
+                <button onclick="document.getElementById('json-file-input').click()" class="file-input-button">
+                    📁 JSONファイルを読み込み
+                </button>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div id="no-data-message" class="no-data-message">
+                JSONファイルを選択してデータを表示してください
+            </div>
+            
+            <div id="data-content" style="display: none;">
+                <div class="section">
+                    <div class="section-header">📊 データ概要</div>
+                    <div class="section-content">
+                        <div class="stats-grid" id="stats-grid">
+                            <!-- 統計情報がここに表示される -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-header">🆔 実験情報</div>
+                    <div class="section-content">
+                        <div class="json-viewer" id="experiment-info">
+                            <!-- 実験情報がここに表示される -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-header">📝 ログデータ</div>
+                    <div class="section-content">
+                        <table class="data-table" id="logs-table">
+                            <thead>
+                                <tr>
+                                    <th>日時</th>
+                                    <th>イベント</th>
+                                    <th>詳細</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- ログデータがここに表示される -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-header">🔖 ブックマーク</div>
+                    <div class="section-content">
+                        <table class="data-table" id="bookmarks-table">
+                            <thead>
+                                <tr>
+                                    <th>タイトル</th>
+                                    <th>URL</th>
+                                    <th>目的</th>
+                                    <th>作成日</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- ブックマークデータがここに表示される -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-header">�� 生データ (JSON)</div>
+                    <div class="section-content">
+                        <div class="json-viewer" id="raw-data">
+                            <!-- 生データがここに表示される -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // データビューアの管理
+        class DataViewer {
+            constructor() {
+                this.data = null;
+                this.init();
+            }
+            
+            init() {
+                document.getElementById('json-file-input').addEventListener('change', (e) => {
+                    this.loadFromFile(e.target.files[0]);
+                });
+            }
+            
+            loadFromFile(file) {
+                if (!file) {
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        this.data = JSON.parse(e.target.result);
+                        console.log('ファイルからデータを読み込みました:', this.data);
+                        this.showData();
+                        this.renderAll();
+                    } catch (error) {
+                        console.error('ファイルの解析に失敗しました:', error);
+                        alert('JSONファイルの形式が正しくありません');
+                    }
+                };
+                reader.readAsText(file);
+            }
+            
+            showData() {
+                document.getElementById('no-data-message').style.display = 'none';
+                document.getElementById('data-content').style.display = 'block';
+            }
+            
+            renderAll() {
+                this.renderStats();
+                this.renderExperimentInfo();
+                this.renderLogs();
+                this.renderBookmarks();
+                this.renderRawData();
+            }
+            
+            renderStats() {
+                const statsGrid = document.getElementById('stats-grid');
+                
+                const stats = {
+                    '実験ID': this.data.experimentId || '未設定',
+                    'ログ数': this.data.logs?.length || 0,
+                    'ブックマーク数': this.data.bookmarks?.length || 0,
+                    'ワークフロー数': this.data.currentWorkflow ? 1 : 0
+                };
+                
+                statsGrid.innerHTML = Object.entries(stats).map(([label, value]) => `
+                    <div class="stat-card">
+                        <div class="stat-number">${value}</div>
+                        <div class="stat-label">${label}</div>
+                    </div>
+                `).join('');
+            }
+            
+            renderExperimentInfo() {
+                const experimentInfo = document.getElementById('experiment-info');
+                
+                const info = {
+                    experimentId: this.data.experimentId,
+                    consentGiven: this.data.consentGiven,
+                    firstUsedAt: this.data.firstUsedAt,
+                    currentWorkflow: this.data.currentWorkflow ? {
+                        text: this.data.currentWorkflow.text,
+                        timestamp: new Date(this.data.currentWorkflow.timestamp).toLocaleString('ja-JP')
+                    } : null
+                };
+                
+                experimentInfo.textContent = JSON.stringify(info, null, 2);
+            }
+            
+            renderLogs() {
+                const logsTable = document.getElementById('logs-table').querySelector('tbody');
+                
+                if (!this.data.logs || this.data.logs.length === 0) {
+                    logsTable.innerHTML = '<tr><td colspan="3">ログデータがありません</td></tr>';
+                    return;
+                }
+                
+                logsTable.innerHTML = this.data.logs.map(log => `
+                    <tr>
+                        <td>${new Date(log.timestamp).toLocaleString('ja-JP')}</td>
+                        <td>${log.eventType}</td>
+                        <td>${JSON.stringify(log.data, null, 2)}</td>
+                    </tr>
+                `).join('');
+            }
+            
+            renderBookmarks() {
+                const bookmarksTable = document.getElementById('bookmarks-table').querySelector('tbody');
+                
+                if (!this.data.bookmarks || this.data.bookmarks.length === 0) {
+                    bookmarksTable.innerHTML = '<tr><td colspan="4">ブックマークデータがありません</td></tr>';
+                    return;
+                }
+                
+                bookmarksTable.innerHTML = this.data.bookmarks.map(bookmark => `
+                    <tr>
+                        <td>${bookmark.title}</td>
+                        <td><a href="${bookmark.url}" target="_blank">${bookmark.url}</a></td>
+                        <td>${bookmark.purpose}</td>
+                        <td>${new Date(bookmark.createdAt).toLocaleString('ja-JP')}</td>
+                    </tr>
+                `).join('');
+            }
+            
+            renderRawData() {
+                const rawData = document.getElementById('raw-data');
+                rawData.textContent = JSON.stringify(this.data, null, 2);
+            }
+        }
+        
+        // ページ読み込み時に初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            new DataViewer();
+        });
+    </script>
+</body>
+</html>
