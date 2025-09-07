@@ -60,6 +60,21 @@ async function resetUserData() {
     }
 }
 
+// ログ保存関数
+async function saveLog(eventType, data) {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      eventType: eventType,
+      data: data
+    };
+    
+    const result = await chrome.storage.local.get(['logs']);
+    const logs = result.logs || [];
+    logs.push(logEntry);
+    
+    await chrome.storage.local.set({ logs: logs });
+}
+
 // ブラウザが閉じられるときの処理
 chrome.runtime.onSuspend.addListener(() => {
     // ブラウザが閉じられるときにワークフローをクリア
@@ -145,6 +160,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
+    // ログの保存
+    if (request.action === 'saveLog') {
+        saveLog(request.eventType, request.data).then(() => {
+            sendResponse({ success: true });
+        }).catch(error => {
+            console.error('ログ保存エラー:', error);
+            sendResponse({ success: false, error: error.message });
+        });
+        return true;
+    }
+
     // 未知のアクションに対する警告
     console.warn('未知のアクション:', request.action);
     sendResponse({ error: 'Unknown action' });
@@ -168,3 +194,33 @@ setInterval(() => {
     });
 }, 60 * 60 * 1000); // 1時間ごとにチェック
 
+// タブの更新・切り替えを監視
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete' && tab.url) {
+        saveLog('tab_updated', {
+            title: tab.title,
+            url: tab.url
+        });
+    }
+});
+
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    try {
+        // アクティブになったタブの詳細情報を取得
+        const tab = await chrome.tabs.get(activeInfo.tabId);
+        saveLog('tab_switched', {
+            title: tab.title,
+            url: tab.url
+        });
+    } catch (error) {
+        console.error('タブ情報の取得に失敗:', error);
+    }
+});
+
+chrome.tabs.onCreated.addListener((tab) => {
+    saveLog('new_tab_opened', {
+        tabId: tab.id,
+        url: tab.url,
+        windowId: tab.windowId
+    });
+});

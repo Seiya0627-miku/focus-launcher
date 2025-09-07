@@ -63,6 +63,20 @@ class PopupManager {
 
     async endWorkflow() {
         try {
+            // 現在のワークフロー情報を取得
+            const result = await chrome.storage.local.get(['currentWorkflow']);
+            const workflowInfo = result.currentWorkflow ? {
+                workflowText: result.currentWorkflow.text,
+                duration: (Date.now() - result.currentWorkflow.timestamp) / 60000 // 分単位
+            } : null;
+            
+            // ログを記録
+            await chrome.runtime.sendMessage({
+                action: 'saveLog',
+                eventType: 'workflow_ended',
+                data: workflowInfo
+            });
+
             await chrome.storage.local.remove(['currentWorkflow']);
             
             // 現在のタブをリロードしてUIを更新
@@ -153,7 +167,7 @@ class PopupManager {
             transform: translate(-50%, -50%);
             background: #4CAF50;
             color: white;
-            padding: 20px 30px;
+            padding: 10px 20px;
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             z-index: 10000;
@@ -161,9 +175,7 @@ class PopupManager {
             font-weight: 500;
         `;
         messageDiv.innerHTML = `
-            <div style="font-size: 1.2rem; margin-bottom: 10px;">✅ リセット完了</div>
-            <div>すべてのデータが削除されました</div>
-            <div style="font-size: 0.9rem; margin-top: 10px;">次回使用時は初回設定から始まります</div>
+            <div style="font-size: 1.0rem">リセット完了</div>
         `;
         document.body.appendChild(messageDiv);
     }
