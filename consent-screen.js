@@ -52,10 +52,10 @@ class ConsentScreenManager {
             // 成功メッセージを表示
             this.showSuccessMessage();
             
-            // 2秒後に新しいタブを開く
+            // 1秒後に新しいタブを開く
             setTimeout(() => {
-                window.location.href = 'chrome://newtab/';
-            }, 2000);
+                chrome.runtime.sendMessage({ action: 'reloadPage' });
+            }, 1000);
             
         } catch (error) {
             console.error('設定の保存に失敗しました:', error);

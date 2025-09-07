@@ -140,6 +140,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
+    if (request.action === 'reloadPage') {
+        // newtab.js の方で処理
+        return true;
+    }
+
     // 未知のアクションに対する警告
     console.warn('未知のアクション:', request.action);
     sendResponse({ error: 'Unknown action' });

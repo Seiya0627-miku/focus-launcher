@@ -1015,6 +1015,9 @@ class FocusLauncher {
             if (request.action === 'showConsentScreen') {
                 this.showConsentScreen();
             }
+            if (request.action === 'reloadPage') {
+                window.location.reload();
+            }
         });
     }
 }
