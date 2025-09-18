@@ -25,7 +25,10 @@
       "config.js",
       "consent-screen.html",
       "consent-screen.css", 
-      "consent-screen.js"
+      "consent-screen.js",
+      "reflection.html",
+      "reflection.css",
+      "reflection.js"
     ],
     "matches": ["<all_urls>"]
   }],

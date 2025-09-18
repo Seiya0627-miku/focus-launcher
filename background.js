@@ -75,6 +75,26 @@ async function saveLog(eventType, data) {
     await chrome.storage.local.set({ logs: logs });
 }
 
+async function handleEndWorkflow() {
+    // 終了前のワークフロー情報を保存
+    const result = await chrome.storage.local.get(['currentWorkflow']);
+    const workflowInfo = result.currentWorkflow ? {
+        workflowText: result.currentWorkflow.text,
+        duration: (Date.now() - result.currentWorkflow.timestamp) / 60000 // 分単位
+    } : null;
+    
+    // ログを記録
+    await saveLog('workflow_ended', workflowInfo);
+
+    // ワークフローをクリア
+    await chrome.storage.local.remove(['currentWorkflow']);
+    
+    console.log('ワークフローを終了しました');
+    
+    // 成功を返す
+    return { success: true };
+}
+
 // ブラウザが閉じられるときの処理
 chrome.runtime.onSuspend.addListener(() => {
     // ブラウザが閉じられるときにワークフローをクリア
@@ -158,6 +178,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'reloadPage') {
         // newtab.js の方で処理
         return true;
+    }
+
+    // ワークフローを終了する
+    if (request.action === 'endWorkflow') {
+        // 本来のendWorkflow処理を実行
+        handleEndWorkflow();
+        sendResponse({ success: true });
     }
 
     // ログの保存

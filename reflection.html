@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Launcher - 使用状況振り返り</title>
+    <link rel="stylesheet" href="reflection.css">
+</head>
+<body>
+    <div id="reflection-screen" class="reflection-container">
+        <div class="reflection-content">
+            <div class="reflection-section">
+                <h2>ワークフローの振り返り</h2>
+                <p>意図に沿わなかったページにチェックを入れてください。</p>
+                <div id="page-list" class="page-list">
+                    <!-- 動的に生成されるページ一覧 -->
+                </div>
+            </div>
+            
+            <div class="reflection-actions">
+                <button id="confirm-reflection" class="primary-button">
+                    確認してワークフローを終了する
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="reflection.js"></script>
+</body>
+</html>

@@ -20,7 +20,7 @@ class FocusLauncher {
 
         // ワークフロー終了ボタン
         document.getElementById('end-workflow').addEventListener('click', () => {
-            this.endWorkflow();
+            this.showReflectionScreen();
         });
 
         // 修正要求送信ボタン
@@ -30,7 +30,7 @@ class FocusLauncher {
 
         // 修正要求セクションのワークフロー終了ボタン
         document.getElementById('end-workflow-feedback').addEventListener('click', () => {
-            this.endWorkflow();
+            this.showReflectionScreen();
         });
 
         // Enterキーでワークフロー開始
@@ -74,7 +74,7 @@ class FocusLauncher {
         // ブラウザの閉じるイベントを監視（実際のブラウザ閉じる時のみ）
         window.addEventListener('unload', () => {
             if (!this.isRefreshing) {
-                this.endWorkflow();
+                this.showReflectionScreen();
             }
         });
     }
@@ -191,7 +191,7 @@ class FocusLauncher {
         if (feedbackText.toLowerCase().includes('ワークフローを終了') || 
             feedbackText.toLowerCase().includes('終了') ||
             feedbackText.toLowerCase().includes('やめる')) {
-            this.endWorkflow();
+            this.showReflectionScreen();
             return;
         }
 
@@ -964,6 +964,20 @@ class FocusLauncher {
         return null;
     }
 
+    // 振り返り画面に遷移する関数
+    async showReflectionScreen() {
+        // 振り返り画面を新しいタブで開く
+        const reflectionUrl = chrome.runtime.getURL('reflection.html');
+        await chrome.tabs.create({ url: reflectionUrl });
+        
+        // 現在のタブを閉じる
+        const currentTab = await chrome.tabs.getCurrent();
+        if (currentTab) {
+            await chrome.tabs.remove(currentTab.id);
+        }
+    }
+
+    // ワークフローを終了する関数
     async endWorkflow() {
         // 終了前のワークフロー情報を保存
         const workflowInfo = this.currentWorkflow ? {
