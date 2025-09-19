@@ -1244,7 +1244,7 @@ class FocusLauncher {
                 isSamePurpose: isSamePurpose,
                 timestamp: Date.now()
             };
-            
+
             this.currentWorkflow.purposeChecks.push(purposeCheck);
             await chrome.storage.local.set({ currentWorkflow: this.currentWorkflow });
 
@@ -1255,7 +1255,7 @@ class FocusLauncher {
                 button.disabled = false;
                 await chrome.storage.local.set({ waitingForConfirmation: false });
 
-                // 2〜3秒後にタブを閉じる
+                // 1秒後にタブを閉じる
                 setTimeout(() => {
                     overlay.remove();
                     chrome.tabs.getCurrent((tab) => {

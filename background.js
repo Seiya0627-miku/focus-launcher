@@ -194,7 +194,7 @@ chrome.tabs.onCreated.addListener((tab) => {
 // ==== idle監視用テストコード ====
 
 // 放置時間しきい値（秒単位）
-const IDLE_SECONDS = 15; // 15秒放置でテスト
+const IDLE_SECONDS = 3600; // 1時間放置で意図の再確認ポップアップ表示
 
 // idle API の監視を開始
 chrome.idle.setDetectionInterval(IDLE_SECONDS);
