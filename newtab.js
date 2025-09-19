@@ -1210,18 +1210,13 @@ class FocusLauncher {
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'overlay-input';
-        input.placeholder = '例：研究計画書を書いて、関連文献を調べる';
+        input.placeholder = 'ここに「今」の利用目的を入力してください';
 
         // ボタン
         const button = document.createElement('button');
         button.className = 'overlay-button';
         button.textContent = '確認';
         button.disabled = true;
-
-        // ボタンの無効化スタイル更新
-        const updateButtonStyle = () => {
-            // CSSで制御されるため、特別な処理は不要
-        };
 
         // 入力時のイベント
         input.addEventListener('input', () => {
@@ -1230,8 +1225,21 @@ class FocusLauncher {
 
         // ボタンクリック時のイベント
         button.addEventListener('click', async () => {
-            await chrome.storage.local.set({ waitingForConfirmation: false });
-            overlay.remove();
+            const userInput = input.value.trim();
+            if (!userInput) return;
+        
+            // Gemini APIに送信
+            const isSamePurpose = await callGeminiForConfirmation(this.currentWorkflow, userInput);
+        
+            if (isSamePurpose) {
+                console.log("[DEBUG] 利用目的は一致 → 継続");
+                //await chrome.storage.local.set({ waitingForConfirmation: false });
+            } else {
+                console.log("[DEBUG] 利用目的が変化 → ワークフロー終了");
+                //await chrome.storage.local.set({ waitingForConfirmation: false });
+                // 必要なら this.endCurrentWorkflow() など呼ぶ
+            }
+            //overlay.remove();
             console.log('[DEBUG] 確認完了 → overlay非表示');
         });
 
@@ -1254,6 +1262,41 @@ class FocusLauncher {
         setTimeout(() => {
             input.focus();
         }, 100);
+    }
+}
+
+    // Gemini API を呼ぶ関数（true/falseのみ返す想定）
+async function callGeminiForConfirmation(pastPurposeText, currentPurposeText) {
+
+    console.log(pastPurposeText, "->", currentPurposeText);
+    const prompt = `
+    あなたは利用者のブラウザの利用目的が一貫しているかを判断するAIです。
+    完全に一致している必要はなく、内容が類似していればtrueを返してください（例：「研究計画書を書いて、関連文献を調べる」から「論文を広く調べる」に変わった場合はfalseを返してください）。
+    利用目的が変わった場合はfalseを返してください（例：「研究計画書を書く」から「ニュースを見る」に変わった場合はfalseを返してください）。
+    では以下の入力を確認してください：
+    過去の入力: "${pastPurposeText}"
+    現在の入力: "${currentPurposeText}"
+    出力は必ず true または false のみを返してください。
+    `;
+
+    try {
+        const response = await fetch(`${CONFIG.GEMINI_API_URL}?key=${CONFIG.GEMINI_API_KEY}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
+
+        const data = await response.json();
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+
+        console.log("[DEBUG] Gemini 応答:", rawText);
+
+        return rawText.toLowerCase().includes("true");
+    } catch (err) {
+        console.error("[ERROR] Gemini API 呼び出し失敗:", err);
+        return false;
     }
 }
 
