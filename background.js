@@ -62,12 +62,7 @@ async function resetUserData() {
 
 // ログ保存関数
 async function saveLog(eventType, data) {
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      eventType: eventType,
-      data: data
-    };
-    
+        
     const result = await chrome.storage.local.get(['logs']);
     const logs = result.logs || [];
     logs.push(data);

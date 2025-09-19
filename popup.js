@@ -14,7 +14,7 @@ class PopupManager {
     bindEvents() {
         // ワークフロー終了ボタン
         document.getElementById("end-workflow-btn").addEventListener("click", async () => {
-            await this.endWorkflow();
+            this.showReflectionScreen();
         });
 
         // ブックマークボタン
@@ -71,37 +71,22 @@ class PopupManager {
         document.getElementById('no-workflow-info').classList.remove('hidden');
     }
 
-    async endWorkflow() {
+    async showReflectionScreen() {
         try {
-            // 現在のワークフロー情報を取得
-            const result = await chrome.storage.local.get(['currentWorkflow']);
-            const workflowInfo = result.currentWorkflow ? {
-                workflowText: result.currentWorkflow.text,
-                duration: (Date.now() - result.currentWorkflow.timestamp) / 60000 // 分単位
-            } : null;
+            // 振り返り画面を新しいタブで開く
+            const reflectionUrl = chrome.runtime.getURL('reflection.html');
+            await chrome.tabs.create({ url: reflectionUrl });
             
-            // ログを記録
-            await chrome.runtime.sendMessage({
-                action: 'saveLog',
-                eventType: 'workflow_ended',
-                data: workflowInfo
-            });
-
-            await chrome.storage.local.remove(['currentWorkflow']);
-            
-            // 現在のタブをリロードしてUIを更新
-            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (tabs[0]) {
-                await chrome.tabs.reload(tabs[0].id);
+            // ポップアップを閉じる
+            window.close();
+            // 現在のタブを閉じる
+            const currentTab = await chrome.tabs.getCurrent();
+            if (currentTab) {
+                await chrome.tabs.remove(currentTab.id);
             }
-            
-            // ポップアップのUIを更新
-            await this.updateUI();
-        await this.showExperimentId();
-            
         } catch (error) {
             console.error('ワークフロー終了に失敗しました:', error);
-            alert('ワークフロー終了に失敗しました。');
+            alert('ワークフロー終了に失敗しました。もう一度お試しください。');
         }
     }
 
@@ -290,7 +275,7 @@ class PopupManager {
         const originalText = statusText.textContent;
         
         statusText.textContent = '実験データをエクスポートしました';
-        statusText.style.color = '#10b981';
+        statusText.style.color = '#ffffff';
         
         setTimeout(() => {
             statusText.textContent = originalText;
