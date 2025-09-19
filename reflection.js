@@ -42,18 +42,38 @@ class ReflectionManager {
             return;
         }
 
-        this.visitedPages.forEach((page, index) => {
+        // タイムスタンプでソート（古い順）
+        const sortedPages = [...this.visitedPages].sort((a, b) => a.timestamp - b.timestamp);
+
+        sortedPages.forEach((page, index) => {
             const pageItem = document.createElement('div');
             pageItem.className = 'page-item';
+            
+            // タイムスタンプをフォーマット
+            const formattedTime = this.formatTimestamp(page.timestamp);
+            
             pageItem.innerHTML = `
                 <input type="checkbox" id="page-${index}" data-index="${index}">
                 <div class="page-info">
-                    <div class="page-title">${page.title}</div>
-                    <div class="page-url">${page.url}</div>
+                    <div class="page-title">
+                        <a href="${page.url}" target="_blank" rel="noopener noreferrer">${page.title}</a>
+                    </div>
+                    <div class="page-timestamp">${formattedTime}</div>
                 </div>
             `;
             pageList.appendChild(pageItem);
         });
+    }
+
+    formatTimestamp(timestamp) {
+        const date = new Date(timestamp);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
     }
 
     async handleConfirmation() {
@@ -64,7 +84,9 @@ class ReflectionManager {
             
             checkboxes.forEach(checkbox => {
                 const index = parseInt(checkbox.dataset.index);
-                checkedPages.push(this.visitedPages[index]);
+                // ソートされた配列から元のインデックスを取得
+                const sortedPages = [...this.visitedPages].sort((a, b) => a.timestamp - b.timestamp);
+                checkedPages.push(sortedPages[index]);
             });
 
             // ページの評価を保存
