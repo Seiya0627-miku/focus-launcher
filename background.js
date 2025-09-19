@@ -1,11 +1,14 @@
 // Focus Launcher - バックグラウンドスクリプト
+console.log("[DEBUG] background.js loaded");
+
 
 // 拡張機能のインストール時の処理
 chrome.runtime.onInstalled.addListener(() => { 
     // 初期設定
     chrome.storage.local.set({
         isFirstRun: true,
-        currentWorkflow: null
+        currentWorkflow: null,
+        waitingForConfirmation: false 
     });
 });
 
@@ -161,25 +164,75 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
+    if (msg.action === "confirmationDone") {
+        chrome.storage.local.set({ waitingForConfirmation: false }, () => {
+            console.log("[DEBUG] 確認待ち状態を解除しました");
+        });
+        sendResponse({ success: true });
+    }
+
     // 未知のアクションに対する警告
     console.warn('未知のアクション:', request.action);
     sendResponse({ error: 'Unknown action' });
     return true;
 });
 
-// 定期的なクリーンアップ（24時間経過したワークフローを削除）
-setInterval(() => {
-    chrome.storage.local.get(['currentWorkflow'], (result) => {
-        if (result.currentWorkflow) {
-            const now = Date.now();
-            const workflowAge = now - result.currentWorkflow.timestamp;
-            const oneDay = 24 * 60 * 60 * 1000; // 24時間（ミリ秒）
-            
-            if (workflowAge > oneDay) {
-                chrome.storage.local.remove(['currentWorkflow'], () => {
-                    console.log('24時間経過したワークフローを削除しました');
+// 新しいタブで overlay を表示
+chrome.tabs.onCreated.addListener((tab) => {
+    chrome.storage.local.get(['waitingForConfirmation'], (result) => {
+        if (result.waitingForConfirmation) {
+            if (tab.url.startsWith("http") || tab.url.startsWith("https")) {
+                chrome.tabs.sendMessage(tab.id, { action: "showOverlay" }, (res) => {
+                    if (chrome.runtime.lastError) console.log("sendMessage失敗:", chrome.runtime.lastError.message);
                 });
             }
         }
     });
-}, 60 * 60 * 1000); // 1時間ごとにチェック
+});
+
+// ==== idle監視用テストコード ====
+
+// 放置時間しきい値（秒単位）
+const IDLE_SECONDS = 15; // 15秒放置でテスト
+
+// idle API の監視を開始
+chrome.idle.setDetectionInterval(IDLE_SECONDS);
+console.log("[IDLE DEBUG] idle監視を開始（", IDLE_SECONDS, "秒）");
+
+
+// idleイベントリスナ
+chrome.idle.setDetectionInterval(IDLE_SECONDS);
+chrome.idle.onStateChanged.addListener((newState) => {
+    if (newState === "idle" || newState === "locked") {
+        chrome.storage.local.get(["currentWorkflow", "waitingForConfirmation"], (res) => {
+            if (res.currentWorkflow?.text && !res.waitingForConfirmation) {
+                console.log("[IDLE DEBUG] 放置検知 → 確認待ち状態へ");
+                chrome.storage.local.set({ waitingForConfirmation: true }, () => {
+                    openOverlayTab();
+                });
+            }
+        });
+    }
+});
+
+// 新しいタブを開き overlay を実行
+function openOverlayTab() {
+    chrome.tabs.create({ url: "newtab.html" }, (tab) => {
+        console.log("[DEBUG] 新しいタブを開きました", tab.id);
+
+        // タブの読み込み完了を待つ
+        const listener = (tabId, changeInfo) => {
+            if (tabId === tab.id && changeInfo.status === "complete") {
+                chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    files: ["overlayContent.js"]
+                }, () => {
+                    if (chrome.runtime.lastError)
+                        console.log("executeScript失敗:", chrome.runtime.lastError.message);
+                });
+                chrome.tabs.onUpdated.removeListener(listener);
+            }
+        };
+        chrome.tabs.onUpdated.addListener(listener);
+    });
+}

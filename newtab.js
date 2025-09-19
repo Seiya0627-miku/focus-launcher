@@ -13,6 +13,7 @@ class FocusLauncher {
         this.checkFirstTimeUser();
         this.setupPageTracking();
         await this.restoreVisitedPages();
+        await this.checkOverlay();
     }
 
     // ページリロード時にvisitedPagesを復元
@@ -1176,10 +1177,68 @@ class FocusLauncher {
             }
         });
     }
+
+    async checkOverlay() {
+        const result = await chrome.storage.local.get(['waitingForConfirmation']);
+        if (result.waitingForConfirmation) {
+            this.showOverlay();
+        }
+    }
+
+    showOverlay() {
+        const overlay = document.createElement('div');
+        overlay.id = 'confirmation-overlay';
+        Object.assign(overlay.style, {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+        });
+
+        const box = document.createElement('div');
+        Object.assign(box.style, {
+            backgroundColor: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            minWidth: '300px',
+            textAlign: 'center'
+        });
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'ここに入力';
+        input.style.width = '80%';
+        input.style.marginBottom = '10px';
+
+        const button = document.createElement('button');
+        button.textContent = '確認';
+        button.disabled = true;
+
+        input.addEventListener('input', () => {
+            button.disabled = input.value.trim().length === 0;
+        });
+
+        button.addEventListener('click', async () => {
+            await chrome.storage.local.set({ waitingForConfirmation: false });
+            overlay.remove();
+            console.log('[DEBUG] 確認完了 → overlay非表示');
+        });
+
+        box.appendChild(input);
+        box.appendChild(document.createElement('br'));
+        box.appendChild(button);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+    }
 }
 
 // アプリケーションの初期化
 document.addEventListener('DOMContentLoaded', () => {
     new FocusLauncher();
 }); 
-

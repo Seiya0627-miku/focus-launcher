@@ -8,7 +8,8 @@
     "tabs",
     "activeTab",
     "scripting",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "idle"
   ],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*"
