@@ -20,20 +20,16 @@ class ReflectionManager {
 
     async loadVisitedPages() {
         try {
-            // 現在のワークフローからアクセスしたページを取得
-            const result = await chrome.storage.local.get(['currentWorkflow']);
-            if (result.currentWorkflow) {
-                // 実際の実装では、タブの履歴からページ情報を取得
-                // 今回は仮のデータで実装
-                this.visitedPages = [
-                    { title: "Google Docs", url: "https://docs.google.com", timestamp: Date.now() - 300000 },
-                    { title: "Google Scholar", url: "https://scholar.google.com", timestamp: Date.now() - 240000 },
-                    { title: "Wikipedia", url: "https://ja.wikipedia.org", timestamp: Date.now() - 180000 },
-                    { title: "YouTube", url: "https://youtube.com", timestamp: Date.now() - 120000 }
-                ];
+            // currentWorkflowVisitedPagesから取得
+            const result = await chrome.storage.local.get(['currentWorkflowVisitedPages']);
+            if (result.currentWorkflowVisitedPages) {
+                this.visitedPages = result.currentWorkflowVisitedPages;
+            } else {
+                this.visitedPages = [];
             }
         } catch (error) {
             console.error('アクセスページの取得に失敗しました:', error);
+            this.visitedPages = [];
         }
     }
 
@@ -71,8 +67,8 @@ class ReflectionManager {
                 checkedPages.push(this.visitedPages[index]);
             });
 
-            // ログを保存（詳細情報は伏せる）
-            await this.saveReflectionLog(checkedPages);
+            // ページの評価を保存
+            await this.savePageEvaluations(checkedPages);
 
             // ホーム画面に戻る
             this.returnToHome();
@@ -83,45 +79,61 @@ class ReflectionManager {
         }
     }
 
-    async saveReflectionLog(regrettedPages) {
-        // 振り返りログを保存
-        const reflectionLog = {
-            timestamp: Date.now(),
-            totalPages: this.visitedPages.length,
-            regrettedPages: regrettedPages.length,
-            regrettedPageTitles: regrettedPages.map(p => p.title), // タイトルのみ保存
-            pageSequence: this.visitedPages.map(p => ({ 
-                title: p.title, 
-                timestamp: p.timestamp 
-            })) // 時系列は保持
-        };
+    async savePageEvaluations(regrettedPages) {
+        try {
+            // 現在のワークフロー情報を取得
+            const result = await chrome.storage.local.get(['currentWorkflow']);
+            const currentWorkflow = result.currentWorkflow;
+    
+            if (!currentWorkflow) {
+                console.error('ワークフロー情報が見つかりません');
+                return;
+            }
+    
+            // 各ページの評価を作成
+            const pageEvaluations = this.visitedPages.map(page => ({
+                evaluation: regrettedPages.some(regretted => regretted.url === page.url) ? 0 : 1, // 1: 良かった, 0: 良くなかった
+                timestamp: page.timestamp
+            }));
+    
+            // 統一ログを作成
+            const unifiedLog = {
+                workflowText: currentWorkflow.text,
+                startTime: currentWorkflow.timestamp, // 既存のtimestampを使用
+                endTime: Date.now(),
+                fixRequests: currentWorkflow.fixRequests || [],
+                pageEvaluations: pageEvaluations
+            };
+    
+            // ログを記録
+            await chrome.runtime.sendMessage({
+                action: 'saveLog',
+                eventType: 'workflow_completed',
+                data: unifiedLog
+            });
+    
+            // visitedPagesをクリア
+            await chrome.storage.local.remove(['currentWorkflowVisitedPages']);
+            // ワークフローをクリア
+            await chrome.storage.local.remove(['currentWorkflow']);
 
-        await chrome.storage.local.set({ 
-            lastReflectionLog: reflectionLog 
-        });
-
-        // ログを記録
-        await chrome.runtime.sendMessage({
-            action: 'saveLog',
-            eventType: 'workflow_reflection',
-            data: reflectionLog
-        });
+            console.log('統一ログを保存しました:', unifiedLog);
+    
+        } catch (error) {
+            console.error('統一ログの保存に失敗しました:', error);
+            throw error;
+        }
     }
 
-    returnToHome() {
-        // 本来のendWorkflowと同じ処理を実行
-        chrome.runtime.sendMessage({
-            action: 'endWorkflow'
-        }).then(() => {
-            // ワークフロー終了後、新しいタブで入力画面を開く
-            chrome.tabs.create({ url: chrome.runtime.getURL('newtab.html') });
-            
-            // 現在の振り返り画面のタブを閉じる
-            chrome.tabs.getCurrent().then(currentTab => {
-                if (currentTab) {
-                    chrome.tabs.remove(currentTab.id);
-                }
-            });
+    async returnToHome() {
+        // ワークフロー終了後、新しいタブで入力画面を開く
+        chrome.tabs.create({ url: chrome.runtime.getURL('newtab.html') });
+        
+        // 現在の振り返り画面のタブを閉じる
+        chrome.tabs.getCurrent().then(currentTab => {
+            if (currentTab) {
+                chrome.tabs.remove(currentTab.id);
+            }
         });
     }
 }

@@ -3,13 +3,28 @@ class FocusLauncher {
     constructor() {
         this.currentWorkflow = null;
         this.isRefreshing = false;
+        this.visitedPages = []; // ワークフロー中にアクセスしたページを追跡
         this.init();
         this.setupMessageListener();
     }
 
-    init() {
+    async init() {
         this.bindEvents();
         this.checkFirstTimeUser();
+        this.setupPageTracking();
+        await this.restoreVisitedPages();
+    }
+
+    // ページリロード時にvisitedPagesを復元
+    async restoreVisitedPages() {
+        try {
+            const result = await chrome.storage.local.get(['currentWorkflowVisitedPages']);
+            if (result.currentWorkflowVisitedPages) {
+                this.visitedPages = result.currentWorkflowVisitedPages;
+            }
+        } catch (error) {
+            console.error('visitedPagesの復元に失敗しました:', error);
+        }
     }
 
     bindEvents() {
@@ -55,17 +70,6 @@ class FocusLauncher {
             }
         });
 
-        // ホーム画面のリンククリックを監視
-        document.addEventListener('click', (e) => {
-            if (e.target.tagName === 'A' && e.target.href) {
-                this.saveLog('link_clicked', {
-                    url: e.target.href,
-                    text: e.target.textContent,
-                    timestamp: Date.now()
-                });
-            }
-        });
-
         // ページのリロードを検知
         window.addEventListener('beforeunload', () => {
             this.isRefreshing = true;
@@ -79,6 +83,64 @@ class FocusLauncher {
         });
     }
 
+    // ページ遷移の追跡を設定
+    setupPageTracking() {
+        // タブの更新を監視
+        chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+            if (changeInfo.status === 'complete' && tab.url && this.currentWorkflow) {
+                this.trackPageVisit(tab);
+            }
+        });
+
+        // タブの切り替えを監視
+        chrome.tabs.onActivated.addListener((activeInfo) => {
+            chrome.tabs.get(activeInfo.tabId, (tab) => {
+                if (tab && tab.url && this.currentWorkflow) {
+                    this.trackPageVisit(tab);
+                }
+            });
+        });
+    }
+
+    // ページ訪問を追跡
+    async trackPageVisit(tab) {
+        if (!this.currentWorkflow || !tab.url) return;
+
+        // 内部ページ（chrome://, chrome-extension://）は除外
+        if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+            return;
+        }
+
+        const pageInfo = {
+            title: tab.title || '無題のページ',
+            url: tab.url,
+            timestamp: Date.now()
+        };
+
+        // 重複チェック（同じURLで最近アクセスした場合は除外）
+        const recentVisit = this.visitedPages.find(page => 
+            page.url === tab.url && 
+            (Date.now() - page.timestamp) < 3000 // 3秒以内
+        );
+
+        if (!recentVisit) {
+            this.visitedPages.push(pageInfo);
+
+            // localStorageに保存
+            await this.saveVisitedPagesToStorage();
+        }
+    }
+
+    async saveVisitedPagesToStorage() {
+        try {
+            await chrome.storage.local.set({ 
+                currentWorkflowVisitedPages: this.visitedPages 
+            });
+        } catch (error) {
+            console.error('visitedPagesの保存に失敗しました:', error);
+        }
+    }
+
     async saveLog(eventType, data) {
         try {
             await chrome.runtime.sendMessage({
@@ -89,28 +151,6 @@ class FocusLauncher {
         } catch (error) {
             console.error('ログ保存に失敗しました:', error);
         }
-    }
-
-    // リンクの差分を計算する関数
-    calculateLinkDiff(oldActions, newActions) {
-        const oldUrls = new Set(oldActions?.map(action => action.url) || []);
-        const newUrls = new Set(newActions?.map(action => action.url) || []);
-        
-        const addedLinks = newActions?.filter(action => !oldUrls.has(action.url)) || [];
-        const removedLinks = oldActions?.filter(action => !newUrls.has(action.url)) || [];
-        
-        return {
-            added: addedLinks.map(link => ({
-                title: link.title,
-                url: link.url,
-                description: link.description
-            })),
-            removed: removedLinks.map(link => ({
-                title: link.title,
-                url: link.url,
-                description: link.description
-            }))
-        };
     }
 
     async loadCurrentWorkflow() {
@@ -138,12 +178,28 @@ class FocusLauncher {
 
     async startWorkflow() {
         const workflowText = document.getElementById('workflow-textarea').value.trim();
-        
+    
         if (!workflowText) {
-            alert('作業目的を入力してください');
+            alert('作業目的を入力してください。');
             return;
         }
-
+    
+        // ページ追跡をリセット
+        this.visitedPages = [];
+        await chrome.storage.local.remove(['currentWorkflowVisitedPages']);
+    
+        // ワークフロー情報を設定
+        this.currentWorkflow = {
+            text: workflowText,
+            timestamp: Date.now(),
+            aiContent: null,
+            feedback: null,
+            fixRequests: [] // 修正要求履歴を追加
+        };
+    
+        // ストレージに保存
+        await chrome.storage.local.set({ currentWorkflow: this.currentWorkflow });
+    
         this.showLoadingScreen();
 
         try {
@@ -151,19 +207,12 @@ class FocusLauncher {
             const aiResponse = await this.generateHomeScreen(workflowText);
             
             this.currentWorkflow = {
-                text: workflowText,
-                timestamp: Date.now(),
+                ...this.currentWorkflow,
                 aiContent: aiResponse
             };
 
             // ストレージに保存
             await chrome.storage.local.set({ currentWorkflow: this.currentWorkflow });
-
-            // ログを記録
-            await this.saveLog('workflow_started', {
-                workflowText: workflowText,
-                timestamp: this.currentWorkflow.timestamp
-            });
 
             this.showHomeScreen();
             this.updateHomeScreen();
@@ -185,8 +234,6 @@ class FocusLauncher {
             return;
         }
 
-        console.log('修正要求を受信:', feedbackText);
-
         // ワークフロー終了の要求かチェック
         if (feedbackText.toLowerCase().includes('ワークフローを終了') || 
             feedbackText.toLowerCase().includes('終了') ||
@@ -198,31 +245,21 @@ class FocusLauncher {
         this.showLoadingScreen();
 
         try {
-            console.log('修正要求shori:', feedbackText);
-            // 修正前の状態を保存
-            const previousActions = this.currentWorkflow?.aiContent?.actions || [];
-            
+            console.log('修正要求処理:', feedbackText);
+
+            // 修正要求を履歴に追加
+            const fixRequest = {
+                text: feedbackText,
+                timestamp: Date.now()
+            };
+            this.currentWorkflow.fixRequests.push(fixRequest);
+         
             // Gemini APIを呼び出して修正要求を処理
             const aiResponse = await this.processFeedbackWithAI(feedbackText);
             
-            // 修正後の状態
-            const newActions = aiResponse?.actions || [];
-            
-            // リンクの差分を計算
-            const linkDiff = this.calculateLinkDiff(previousActions, newActions);
-            
-            // ログを記録（差分のみ）
-            await this.saveLog('home_screen_modified', {
-                feedbackText: feedbackText,
-                linkChanges: linkDiff,
-                totalLinksBefore: previousActions.length,
-                totalLinksAfter: newActions.length
-            });
-            
             // ワークフローを更新
             this.currentWorkflow = {
-                text: this.currentWorkflow.text,
-                timestamp: Date.now(),
+                ...this.currentWorkflow,
                 aiContent: aiResponse,
                 feedback: feedbackText
             };
@@ -237,8 +274,6 @@ class FocusLauncher {
             document.getElementById('feedback-textarea').value = '';
             console.log('修正要求を処理しました:', feedbackText);
             
-            // 成功メッセージは processFeedbackWithAI 内で適切に表示されるため、ここでは表示しない
-
         } catch (error) {
             console.error('修正要求の処理に失敗しました:', error);
             alert('修正要求の処理に失敗しました。もう一度お試しください。');
@@ -289,7 +324,7 @@ class FocusLauncher {
 - ツール名はそのまま表示し、余計な情報（「構成検討」など）は付けないでください
 `;
 
-        console.log('AIに送信するプロンプト:', prompt);
+        // console.log('AIに送信するプロンプト:', prompt);
 
         // APIキーが設定されている場合はGemini APIを使用
         if (CONFIG.GEMINI_API_KEY) {
@@ -652,10 +687,10 @@ class FocusLauncher {
                 console.log('Gemini APIでワークフロー生成成功');
 
                 // ログを記録
-                await this.saveLog('home_screen_generated', {
-                    workflowText: workflowText,
-                    aiResponse: result
-                });
+                // await this.saveLog('home_screen_generated', {
+                //     workflowText: workflowText,
+                //     aiResponse: result
+                // });
 
                 return result;
             } catch (error) {
@@ -979,17 +1014,14 @@ class FocusLauncher {
 
     // ワークフローを終了する関数
     async endWorkflow() {
-        // 終了前のワークフロー情報を保存
-        const workflowInfo = this.currentWorkflow ? {
-            workflowText: this.currentWorkflow.text,
-            duration: (Date.now() - this.currentWorkflow.timestamp) / 60000 // 分単位
-        } : null;
-        
-        // ログを記録
-        await this.saveLog('workflow_ended', workflowInfo);
-
+        // ワークフロー情報をクリア
         this.currentWorkflow = null;
         await chrome.storage.local.remove(['currentWorkflow']);
+
+        // visitedPagesもクリア
+        this.visitedPages = [];
+        await chrome.storage.local.remove(['currentWorkflowVisitedPages']);
+
         this.showWorkflowInput();
         console.log('ワークフローを終了しました');
     }

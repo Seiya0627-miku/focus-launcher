@@ -241,18 +241,25 @@ class PopupManager {
     async exportExperimentData() {
         try {
             // すべての実験データを取得
-            const result = await chrome.storage.local.get(null);
+            const result = await chrome.storage.local.get([
+                'experimentId', 
+                'consentGiven', 
+                'firstUsedAt', 
+                'currentWorkflow',
+                'currentWorkflowVisitedPages', // 追加
+                'bookmarks', 
+                'logs'
+            ]);
             
             // エクスポート用データを整理
             const exportData = {
                 experimentId: result.experimentId,
                 consentGiven: result.consentGiven,
                 firstUsedAt: result.firstUsedAt,
-                currentWorkflow: result.currentWorkflow,
                 bookmarks: result.bookmarks || [],
                 logs: result.logs || [],
                 exportTimestamp: new Date().toISOString(),
-                exportVersion: "1.0.0"
+                exportVersion: "1.2.0"
             };
             
             // JSONファイルとしてダウンロード

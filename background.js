@@ -70,29 +70,9 @@ async function saveLog(eventType, data) {
     
     const result = await chrome.storage.local.get(['logs']);
     const logs = result.logs || [];
-    logs.push(logEntry);
+    logs.push(data);
     
     await chrome.storage.local.set({ logs: logs });
-}
-
-async function handleEndWorkflow() {
-    // 終了前のワークフロー情報を保存
-    const result = await chrome.storage.local.get(['currentWorkflow']);
-    const workflowInfo = result.currentWorkflow ? {
-        workflowText: result.currentWorkflow.text,
-        duration: (Date.now() - result.currentWorkflow.timestamp) / 60000 // 分単位
-    } : null;
-    
-    // ログを記録
-    await saveLog('workflow_ended', workflowInfo);
-
-    // ワークフローをクリア
-    await chrome.storage.local.remove(['currentWorkflow']);
-    
-    console.log('ワークフローを終了しました');
-    
-    // 成功を返す
-    return { success: true };
 }
 
 // ブラウザが閉じられるときの処理
@@ -145,12 +125,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // 非同期レスポンスを有効にする
         return true;
     }
-    
-    if (request.action === 'test') {
-        console.log('テストメッセージを受信しました');
-        sendResponse({ success: true });
-        return true;
-    }
 
     if (request.action === 'generateExperimentId') {
         const experimentId = generateExperimentId();
@@ -180,12 +154,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
-    // ワークフローを終了する
-    if (request.action === 'endWorkflow') {
-        // 本来のendWorkflow処理を実行
-        handleEndWorkflow();
-        sendResponse({ success: true });
-    }
 
     // ログの保存
     if (request.action === 'saveLog') {
@@ -220,34 +188,3 @@ setInterval(() => {
         }
     });
 }, 60 * 60 * 1000); // 1時間ごとにチェック
-
-// タブの更新・切り替えを監視
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && tab.url) {
-        saveLog('tab_updated', {
-            title: tab.title,
-            url: tab.url
-        });
-    }
-});
-
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-    try {
-        // アクティブになったタブの詳細情報を取得
-        const tab = await chrome.tabs.get(activeInfo.tabId);
-        saveLog('tab_switched', {
-            title: tab.title,
-            url: tab.url
-        });
-    } catch (error) {
-        console.error('タブ情報の取得に失敗:', error);
-    }
-});
-
-chrome.tabs.onCreated.addListener((tab) => {
-    saveLog('new_tab_opened', {
-        tabId: tab.id,
-        url: tab.url,
-        windowId: tab.windowId
-    });
-});

@@ -197,8 +197,7 @@
                     const aiResponse = this.generateMockAIResponse(workflowText);
                     
                     this.currentWorkflow = {
-                        text: workflowText,
-                        timestamp: Date.now(),
+                        ...this.currentWorkflow,
                         aiContent: aiResponse
                     };
 
@@ -256,8 +255,7 @@
                     };
                     
                     this.currentWorkflow = {
-                        text: this.currentWorkflow.text,
-                        timestamp: Date.now(),
+                        ...this.currentWorkflow,
                         aiContent: updatedAiContent,
                         feedback: feedbackText
                     };
