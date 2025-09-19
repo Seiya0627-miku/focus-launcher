@@ -1188,53 +1188,72 @@ class FocusLauncher {
     showOverlay() {
         const overlay = document.createElement('div');
         overlay.id = 'confirmation-overlay';
-        Object.assign(overlay.style, {
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 9999,
-        });
 
         const box = document.createElement('div');
-        Object.assign(box.style, {
-            backgroundColor: 'white',
-            padding: '20px',
-            borderRadius: '8px',
-            minWidth: '300px',
-            textAlign: 'center'
-        });
+        box.className = 'overlay-box';
 
+        // タイトル
+        const title = document.createElement('h2');
+        title.className = 'overlay-title';
+        title.textContent = '利用目的の再確認';
+
+        // 説明文
+        const description = document.createElement('p');
+        description.className = 'overlay-description';
+        description.innerHTML = `
+            しばらく作業から離れていたようですね。<br>
+            あなたの現在の利用目的を入力してください。<br>
+            <strong>利用目的が変わった場合、前のワークフローは終了します。</strong>
+        `;
+
+        // 入力欄
         const input = document.createElement('input');
         input.type = 'text';
-        input.placeholder = 'ここに入力';
-        input.style.width = '80%';
-        input.style.marginBottom = '10px';
+        input.className = 'overlay-input';
+        input.placeholder = '例：研究計画書を書いて、関連文献を調べる';
 
+        // ボタン
         const button = document.createElement('button');
+        button.className = 'overlay-button';
         button.textContent = '確認';
         button.disabled = true;
 
+        // ボタンの無効化スタイル更新
+        const updateButtonStyle = () => {
+            // CSSで制御されるため、特別な処理は不要
+        };
+
+        // 入力時のイベント
         input.addEventListener('input', () => {
             button.disabled = input.value.trim().length === 0;
         });
 
+        // ボタンクリック時のイベント
         button.addEventListener('click', async () => {
             await chrome.storage.local.set({ waitingForConfirmation: false });
             overlay.remove();
             console.log('[DEBUG] 確認完了 → overlay非表示');
         });
 
+        // Enterキーでの確認
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !button.disabled) {
+                button.click();
+            }
+        });
+
+        // 要素を組み立て
+        box.appendChild(title);
+        box.appendChild(description);
         box.appendChild(input);
-        box.appendChild(document.createElement('br'));
         box.appendChild(button);
         overlay.appendChild(box);
         document.body.appendChild(overlay);
+
+        // 入力欄にフォーカス
+        setTimeout(() => {
+            input.focus();
+        }, 100);
     }
 }
 
