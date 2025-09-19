@@ -1228,19 +1228,42 @@ class FocusLauncher {
             const userInput = input.value.trim();
             if (!userInput) return;
         
+
+            // 進行中表示に切り替え
+            button.textContent = "判定中...";
+            button.style.backgroundColor = "#aaa"; // グレーっぽくする
+            button.disabled = true;
+
             // Gemini APIに送信
             const isSamePurpose = await callGeminiForConfirmation(this.currentWorkflow, userInput);
         
             if (isSamePurpose) {
                 console.log("[DEBUG] 利用目的は一致 → 継続");
-                //await chrome.storage.local.set({ waitingForConfirmation: false });
+                button.textContent = "目的一致 ✅";
+                button.style.backgroundColor = "#28a745"; // 緑
+                button.disabled = false;
+                await chrome.storage.local.set({ waitingForConfirmation: false });
+
+                // 2〜3秒後にタブを閉じる
+                setTimeout(() => {
+                    overlay.remove();
+                    chrome.tabs.getCurrent((tab) => {
+                        if (tab) {
+                            chrome.tabs.remove(tab.id);
+                        }
+                    });
+                }, 1000);
             } else {
                 console.log("[DEBUG] 利用目的が変化 → ワークフロー終了");
-                //await chrome.storage.local.set({ waitingForConfirmation: false });
-                // 必要なら this.endCurrentWorkflow() など呼ぶ
+                button.textContent = "目的変更 🔄";
+                button.style.backgroundColor = "#ed9121"; // オレンジ
+                button.disabled = false;
+                await chrome.storage.local.set({ waitingForConfirmation: false });
+                setTimeout(() => {
+                    overlay.remove();
+                    this.showReflectionScreen();
+                }, 1000);
             }
-            //overlay.remove();
-            console.log('[DEBUG] 確認完了 → overlay非表示');
         });
 
         // Enterキーでの確認

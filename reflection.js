@@ -114,7 +114,7 @@ class ReflectionManager {
     
             // 各ページの評価を作成
             const pageEvaluations = this.visitedPages.map(page => ({
-                evaluation: regrettedPages.some(regretted => regretted.url === page.url) ? 0 : 1, // 1: 良かった, 0: 良くなかった
+                evaluation: regrettedPages.some(regretted => regretted.url === page.url) ? 0 : 1, // 0:後悔なし 1:後悔あり
                 timestamp: page.timestamp
             }));
     
