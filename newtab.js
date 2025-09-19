@@ -195,7 +195,8 @@ class FocusLauncher {
             timestamp: Date.now(),
             aiContent: null,
             feedback: null,
-            fixRequests: [] // 修正要求履歴を追加
+            fixRequests: [], // 修正要求履歴を追加
+            purposeChecks: [] // 意図の再確認履歴
         };
     
         // ストレージに保存
@@ -1237,6 +1238,16 @@ class FocusLauncher {
             // Gemini APIに送信
             const isSamePurpose = await callGeminiForConfirmation(this.currentWorkflow, userInput);
         
+            // 意図再確認履歴に追加
+            const purposeCheck = {
+                text: userInput,
+                isSamePurpose: isSamePurpose,
+                timestamp: Date.now()
+            };
+            
+            this.currentWorkflow.purposeChecks.push(purposeCheck);
+            await chrome.storage.local.set({ currentWorkflow: this.currentWorkflow });
+
             if (isSamePurpose) {
                 console.log("[DEBUG] 利用目的は一致 → 継続");
                 button.textContent = "目的一致 ✅";

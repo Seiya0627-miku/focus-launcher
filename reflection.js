@@ -127,6 +127,7 @@ class ReflectionManager {
                 reflectionTime: temp.reflectionTime, // 振り返り開始
                 endTime: Date.now(), // 振り返り終了（ワークフロー終了）
                 fixRequests: currentWorkflow.fixRequests || [],
+                purposeChecks: currentWorkflow.purposeChecks || [],
                 pageEvaluations: pageEvaluations
             };
     
