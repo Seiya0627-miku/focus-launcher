@@ -1005,7 +1005,7 @@ class FocusLauncher {
         // 振り返り画面を新しいタブで開く
         const reflectionUrl = chrome.runtime.getURL('reflection.html');
         await chrome.tabs.create({ url: reflectionUrl });
-        
+        await chrome.storage.local.set({ reflectionTime: Date.now() });
         // 現在のタブを閉じる
         const currentTab = await chrome.tabs.getCurrent();
         if (currentTab) {

@@ -8,6 +8,7 @@ chrome.runtime.onInstalled.addListener(() => {
     chrome.storage.local.set({
         isFirstRun: true,
         currentWorkflow: null,
+        reflectionTime: null,
         waitingForConfirmation: false 
     });
 });

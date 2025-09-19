@@ -119,10 +119,13 @@ class ReflectionManager {
             }));
     
             // 統一ログを作成
+            const temp = await chrome.storage.local.get(['reflectionTime']);
+
             const unifiedLog = {
                 workflowText: currentWorkflow.text,
                 startTime: currentWorkflow.timestamp, // 既存のtimestampを使用
-                endTime: Date.now(),
+                reflectionTime: temp.reflectionTime, // 振り返り開始
+                endTime: Date.now(), // 振り返り終了（ワークフロー終了）
                 fixRequests: currentWorkflow.fixRequests || [],
                 pageEvaluations: pageEvaluations
             };
