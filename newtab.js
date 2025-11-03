@@ -1,4 +1,8 @@
 // Focus Launcher - メインロジック
+
+// 新しいモジュールをインポート（段階的移行）
+import { MessageToast } from './modules/ui/message-toast.js';
+
 class FocusLauncher {
     constructor() {
         this.currentWorkflow = null;
@@ -474,29 +478,32 @@ class FocusLauncher {
     }
 
     showSuccessMessage(message) {
-        // 成功メッセージを一時的に表示
-        const successDiv = document.createElement('div');
-        successDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #4CAF50;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 10000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            font-weight: 500;
-        `;
-        successDiv.textContent = message;
-        document.body.appendChild(successDiv);
-        
-        // 3秒後に自動削除
-        setTimeout(() => {
-            if (successDiv.parentNode) {
-                successDiv.parentNode.removeChild(successDiv);
-            }
-        }, 3000);
+        // 新しいモジュールを使用（段階的移行）
+        MessageToast.success(message);
+
+        // 既存のコードは残す（念のため）
+        // const successDiv = document.createElement('div');
+        // successDiv.style.cssText = `
+        //     position: fixed;
+        //     top: 20px;
+        //     right: 20px;
+        //     background: #4CAF50;
+        //     color: white;
+        //     padding: 15px 20px;
+        //     border-radius: 8px;
+        //     z-index: 10000;
+        //     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        //     font-weight: 500;
+        // `;
+        // successDiv.textContent = message;
+        // document.body.appendChild(successDiv);
+        //
+        // // 3秒後に自動削除
+        // setTimeout(() => {
+        //     if (successDiv.parentNode) {
+        //         successDiv.parentNode.removeChild(successDiv);
+        //     }
+        // }, 3000);
     }
 
     extractRemoveRequests(feedbackText) {
@@ -1050,37 +1057,40 @@ class FocusLauncher {
     }
 
     showFallbackMessage(message) {
-        // フォールバックメッセージを一時的に表示
-        const fallbackDiv = document.createElement('div');
-        fallbackDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #FF9800;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 10000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            font-weight: 500;
-            max-width: 400px;
-            line-height: 1.4;
-        `;
-        fallbackDiv.innerHTML = `
-            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <span style="margin-right: 8px;">⚠️</span>
-                <strong>フォールバック処理</strong>
-            </div>
-            <div>${message}</div>
-        `;
-        document.body.appendChild(fallbackDiv);
-        
-        // 5秒後に自動削除
-        setTimeout(() => {
-            if (fallbackDiv.parentNode) {
-                fallbackDiv.parentNode.removeChild(fallbackDiv);
-            }
-        }, 5000);
+        // 新しいモジュールを使用（段階的移行）
+        MessageToast.warning(message);
+
+        // 既存のコードは残す（念のため）
+        // const fallbackDiv = document.createElement('div');
+        // fallbackDiv.style.cssText = `
+        //     position: fixed;
+        //     top: 20px;
+        //     right: 20px;
+        //     background: #FF9800;
+        //     color: white;
+        //     padding: 15px 20px;
+        //     border-radius: 8px;
+        //     z-index: 10000;
+        //     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        //     font-weight: 500;
+        //     max-width: 400px;
+        //     line-height: 1.4;
+        // `;
+        // fallbackDiv.innerHTML = `
+        //     <div style="display: flex; align-items: center; margin-bottom: 8px;">
+        //         <span style="margin-right: 8px;">⚠️</span>
+        //         <strong>フォールバック処理</strong>
+        //     </div>
+        //     <div>${message}</div>
+        // `;
+        // document.body.appendChild(fallbackDiv);
+        //
+        // // 5秒後に自動削除
+        // setTimeout(() => {
+        //     if (fallbackDiv.parentNode) {
+        //         fallbackDiv.parentNode.removeChild(fallbackDiv);
+        //     }
+        // }, 5000);
     }
 
     // 初回利用チェック
