@@ -16,8 +16,8 @@ class FocusLauncher {
     async init() {
         this.bindEvents();
         this.checkFirstTimeUser();
-        // ページトラッキングはbackground.jsで実行するため、ここでは無効化
-        // this.setupPageTracking();
+        // ページトラッキングは両方で実行（background.jsとnewtab.jsの両方）
+        this.setupPageTracking();
         await this.restoreVisitedPages();
         await this.checkOverlay();
     }
@@ -92,21 +92,26 @@ class FocusLauncher {
 
     // ページ遷移の追跡を設定
     setupPageTracking() {
-        // タブの更新を監視
-        chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-            if (changeInfo.status === 'complete' && tab.url && this.currentWorkflow) {
-                this.trackPageVisit(tab);
-            }
-        });
-
-        // タブの切り替えを監視
-        chrome.tabs.onActivated.addListener((activeInfo) => {
-            chrome.tabs.get(activeInfo.tabId, (tab) => {
-                if (tab && tab.url && this.currentWorkflow) {
+        try {
+            // タブの更新を監視
+            chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+                if (changeInfo.status === 'complete' && tab.url && this.currentWorkflow) {
                     this.trackPageVisit(tab);
                 }
             });
-        });
+
+            // タブの切り替えを監視
+            chrome.tabs.onActivated.addListener((activeInfo) => {
+                chrome.tabs.get(activeInfo.tabId, (tab) => {
+                    if (tab && tab.url && this.currentWorkflow) {
+                        this.trackPageVisit(tab);
+                    }
+                });
+            });
+            console.log('[PAGE TRACKING] newtab.jsでページトラッキングを開始しました');
+        } catch (error) {
+            console.error('[PAGE TRACKING] newtab.jsでのページトラッキング設定に失敗:', error);
+        }
     }
 
     // ページ訪問を追跡
