@@ -1,5 +1,8 @@
 // Focus Launcher - ポップアップ用スクリプト
 
+// 新しいモジュールをインポート（段階的移行）
+import { UrlValidator } from './modules/utils/url-validator.js';
+
 class PopupManager {
     constructor() {
         this.init();
@@ -141,13 +144,19 @@ class PopupManager {
                 return;
             }
             
-            // 無効なURLをチェック
-            if (currentTab.url.startsWith('chrome://') || 
-                currentTab.url.startsWith('chrome-extension://') ||
-                currentTab.url.startsWith('about:')) {
+            // 無効なURLをチェック（新しいモジュールを使用）
+            if (!UrlValidator.isBookmarkable(currentTab.url)) {
                 alert('このページはブックマークできません');
                 return;
             }
+
+            // 既存のコードは残す（念のため）
+            // if (currentTab.url.startsWith('chrome://') ||
+            //     currentTab.url.startsWith('chrome-extension://') ||
+            //     currentTab.url.startsWith('about:')) {
+            //     alert('このページはブックマークできません');
+            //     return;
+            // }
             
             // ブックマークデータを作成
             const bookmark = {

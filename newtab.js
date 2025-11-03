@@ -2,6 +2,7 @@
 
 // 新しいモジュールをインポート（段階的移行）
 import { MessageToast } from './modules/ui/message-toast.js';
+import { UrlValidator } from './modules/utils/url-validator.js';
 
 class FocusLauncher {
     constructor() {
@@ -111,10 +112,15 @@ class FocusLauncher {
     async trackPageVisit(tab) {
         if (!this.currentWorkflow || !tab.url) return;
 
-        // 内部ページ（chrome://, chrome-extension://）は除外
-        if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+        // 内部ページを除外（新しいモジュールを使用）
+        if (!UrlValidator.isTrackable(tab.url)) {
             return;
         }
+
+        // 既存のコードは残す（念のため）
+        // if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+        //     return;
+        // }
 
         const pageInfo = {
             title: tab.title || '無題のページ',
