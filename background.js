@@ -178,6 +178,40 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
 });
 
+// ページ訪問追跡（background.jsで実行）
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete' && tab.url) {
+        // ワークフローが存在するかチェック
+        const result = await chrome.storage.local.get(['currentWorkflow', 'currentWorkflowVisitedPages']);
+        if (!result.currentWorkflow) return;
+
+        // 内部ページは除外
+        if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+            return;
+        }
+
+        const pageInfo = {
+            title: tab.title || '無題のページ',
+            url: tab.url,
+            timestamp: Date.now()
+        };
+
+        const visitedPages = result.currentWorkflowVisitedPages || [];
+
+        // 重複チェック（同じURLで最近アクセスした場合は除外）
+        const recentVisit = visitedPages.find(page =>
+            page.url === tab.url &&
+            (Date.now() - page.timestamp) < 3000 // 3秒以内
+        );
+
+        if (!recentVisit) {
+            visitedPages.push(pageInfo);
+            await chrome.storage.local.set({ currentWorkflowVisitedPages: visitedPages });
+            console.log('[PAGE TRACKING] ページを追跡しました:', pageInfo.title, pageInfo.url);
+        }
+    }
+});
+
 // 新しいタブで overlay を表示
 chrome.tabs.onCreated.addListener((tab) => {
     chrome.storage.local.get(['waitingForConfirmation'], (result) => {

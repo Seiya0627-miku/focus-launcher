@@ -16,7 +16,8 @@ class FocusLauncher {
     async init() {
         this.bindEvents();
         this.checkFirstTimeUser();
-        this.setupPageTracking();
+        // ページトラッキングはbackground.jsで実行するため、ここでは無効化
+        // this.setupPageTracking();
         await this.restoreVisitedPages();
         await this.checkOverlay();
     }
