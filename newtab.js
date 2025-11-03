@@ -3,6 +3,7 @@
 // 新しいモジュールをインポート（段階的移行）
 import { MessageToast } from './modules/ui/message-toast.js';
 import { UrlValidator } from './modules/utils/url-validator.js';
+import { StorageManager } from './modules/core/storage-manager.js';
 
 class FocusLauncher {
     constructor() {
@@ -24,14 +25,18 @@ class FocusLauncher {
 
     // ページリロード時にvisitedPagesを復元
     async restoreVisitedPages() {
-        try {
-            const result = await chrome.storage.local.get(['currentWorkflowVisitedPages']);
-            if (result.currentWorkflowVisitedPages) {
-                this.visitedPages = result.currentWorkflowVisitedPages;
-            }
-        } catch (error) {
-            console.error('visitedPagesの復元に失敗しました:', error);
-        }
+        // 新しいモジュールを使用（段階的移行）
+        this.visitedPages = await StorageManager.getVisitedPages();
+
+        // 既存のコードは残す（念のため）
+        // try {
+        //     const result = await chrome.storage.local.get(['currentWorkflowVisitedPages']);
+        //     if (result.currentWorkflowVisitedPages) {
+        //         this.visitedPages = result.currentWorkflowVisitedPages;
+        //     }
+        // } catch (error) {
+        //     console.error('visitedPagesの復元に失敗しました:', error);
+        // }
     }
 
     bindEvents() {
@@ -171,26 +176,44 @@ class FocusLauncher {
     }
 
     async loadCurrentWorkflow() {
-        try {
-            const result = await chrome.storage.local.get(['currentWorkflow']);
-            console.log('ストレージから取得したデータ:', result);
-            
-            if (result.currentWorkflow && result.currentWorkflow.text) {
-                this.currentWorkflow = result.currentWorkflow;
-                
-                // ワークフローが存在する場合は、直接ホーム画面を表示
-                this.showHomeScreen();
-                this.updateHomeScreen();
-                
-                console.log('既存のワークフローを復元しました:', this.currentWorkflow.text);
-            } else {
-                this.showWorkflowInput();
-                console.log('新しいワークフローを開始します');
-            }
-        } catch (error) {
-            console.error('ワークフローの読み込みに失敗しました:', error);
+        // 新しいモジュールを使用（段階的移行）
+        const currentWorkflow = await StorageManager.getCurrentWorkflow();
+        console.log('ストレージから取得したデータ:', currentWorkflow);
+
+        if (currentWorkflow && currentWorkflow.text) {
+            this.currentWorkflow = currentWorkflow;
+
+            // ワークフローが存在する場合は、直接ホーム画面を表示
+            this.showHomeScreen();
+            this.updateHomeScreen();
+
+            console.log('既存のワークフローを復元しました:', this.currentWorkflow.text);
+        } else {
             this.showWorkflowInput();
+            console.log('新しいワークフローを開始します');
         }
+
+        // 既存のコードは残す（念のため）
+        // try {
+        //     const result = await chrome.storage.local.get(['currentWorkflow']);
+        //     console.log('ストレージから取得したデータ:', result);
+        //
+        //     if (result.currentWorkflow && result.currentWorkflow.text) {
+        //         this.currentWorkflow = result.currentWorkflow;
+        //
+        //         // ワークフローが存在する場合は、直接ホーム画面を表示
+        //         this.showHomeScreen();
+        //         this.updateHomeScreen();
+        //
+        //         console.log('既存のワークフローを復元しました:', this.currentWorkflow.text);
+        //     } else {
+        //         this.showWorkflowInput();
+        //         console.log('新しいワークフローを開始します');
+        //     }
+        // } catch (error) {
+        //     console.error('ワークフローの読み込みに失敗しました:', error);
+        //     this.showWorkflowInput();
+        // }
     }
 
     async startWorkflow() {
@@ -981,13 +1004,17 @@ class FocusLauncher {
     }
 
     async getBookmarks() {
-        try {
-            const result = await chrome.storage.local.get(['bookmarks']);
-            return result.bookmarks || [];
-        } catch (error) {
-            console.error('ブックマークの取得に失敗しました:', error);
-            return [];
-        }
+        // 新しいモジュールを使用（段階的移行）
+        return await StorageManager.getBookmarks();
+
+        // 既存のコードは残す（念のため）
+        // try {
+        //     const result = await chrome.storage.local.get(['bookmarks']);
+        //     return result.bookmarks || [];
+        // } catch (error) {
+        //     console.error('ブックマークの取得に失敗しました:', error);
+        //     return [];
+        // }
     }
 
     async getFavicon(url) {

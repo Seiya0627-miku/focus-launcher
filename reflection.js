@@ -2,6 +2,7 @@
 
 // 新しいモジュールをインポート（段階的移行）
 import { TimeFormatter } from './modules/utils/time-formatter.js';
+import { StorageManager } from './modules/core/storage-manager.js';
 
 class ReflectionManager {
     constructor() {
@@ -23,18 +24,22 @@ class ReflectionManager {
     }
 
     async loadVisitedPages() {
-        try {
-            // currentWorkflowVisitedPagesから取得
-            const result = await chrome.storage.local.get(['currentWorkflowVisitedPages']);
-            if (result.currentWorkflowVisitedPages) {
-                this.visitedPages = result.currentWorkflowVisitedPages;
-            } else {
-                this.visitedPages = [];
-            }
-        } catch (error) {
-            console.error('アクセスページの取得に失敗しました:', error);
-            this.visitedPages = [];
-        }
+        // 新しいモジュールを使用（段階的移行）
+        this.visitedPages = await StorageManager.getVisitedPages();
+
+        // 既存のコードは残す（念のため）
+        // try {
+        //     // currentWorkflowVisitedPagesから取得
+        //     const result = await chrome.storage.local.get(['currentWorkflowVisitedPages']);
+        //     if (result.currentWorkflowVisitedPages) {
+        //         this.visitedPages = result.currentWorkflowVisitedPages;
+        //     } else {
+        //         this.visitedPages = [];
+        //     }
+        // } catch (error) {
+        //     console.error('アクセスページの取得に失敗しました:', error);
+        //     this.visitedPages = [];
+        // }
     }
 
     renderPageList() {
