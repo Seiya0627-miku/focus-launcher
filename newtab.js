@@ -4,6 +4,8 @@
 import { MessageToast } from './modules/ui/message-toast.js';
 import { UrlValidator } from './modules/utils/url-validator.js';
 import { StorageManager } from './modules/core/storage-manager.js';
+import { GeminiClient } from './modules/ai/gemini-client.js';
+import { PromptBuilder } from './modules/ai/prompt-builder.js';
 
 class FocusLauncher {
     constructor() {
@@ -323,69 +325,42 @@ class FocusLauncher {
     }
 
     async processFeedbackWithAI(feedbackText) {
-        // 既存のワークフロー情報と修正要求を組み合わせてAIに送信
-        const currentActions = this.currentWorkflow.aiContent.actions;
-        const currentTitle = this.currentWorkflow.aiContent.title;
-        const currentContent = this.currentWorkflow.aiContent.content;
-        
-        const prompt = `
-現在のワークフロー情報：
-- タイトル: ${currentTitle}
-- 内容: ${currentContent}
-- 現在のツール: ${currentActions.map(a => a.title).join(', ')}
+        // 新しいモジュールを使用（段階的移行）
+        const prompt = PromptBuilder.buildFeedbackPrompt(this.currentWorkflow, feedbackText);
 
-ユーザーからの修正要求: ${feedbackText}
+        // 既存のコードは削除（新しいモジュールに完全移行）
+        // const currentActions = this.currentWorkflow.aiContent.actions;
+        // const currentTitle = this.currentWorkflow.aiContent.title;
+        // const currentContent = this.currentWorkflow.aiContent.content;
+        //
+        // const prompt = `
+        // 現在のワークフロー情報：
+        // - タイトル: ${currentTitle}
+        // - 内容: ${currentContent}
+        // - 現在のツール: ${currentActions.map(a => a.title).join(', ')}
+        //
+        // ユーザーからの修正要求: ${feedbackText}
 
-上記の修正要求に基づいて、以下のJSON形式で応答してください：
-{
-    "title": "更新されたタイトル",
-    "content": "更新された内容（HTML形式）",
-    "actions": [
-        {
-            "title": "ツール名",
-            "description": "説明",
-            "url": "URL",
-            "icon": "絵文字アイコン"
-        }
-    ]
-}
-
-注意事項：
-- 既存のツールはurl含めて原則変更しないでください（例：https://slides.google.comをhttps://docs.google.com/presentation/に変更しないでください）
-- 削除要求があれば該当ツールを除外してください
-- 追加要求があれば、既存のjsonの後ろに新しいツールの情報を追加してください
-- 重複は避けてください
-- 実用的で関連性の高いツールを提案してください
-- 論文を広く調べる必要がある場合はPaperDive（https://www.paperdive.app/）を必ず含める
-- Google Driveは常に含める（ファイル管理のため）
-- Google Workspaceツール（Docs、Slides、Sheets、Drive、Mailなど）は以下のURL形式で統一してください：
-  * Google Docs: https://docs.google.com
-  * Google Slides: https://slides.google.com
-  * その他についても以上と同様にしてください
-- ツール名はそのまま表示し、余計な情報（「構成検討」など）は付けないでください
-`;
-
-        // console.log('AIに送信するプロンプト:', prompt);
 
         // APIキーが設定されている場合はGemini APIを使用
-        if (CONFIG.GEMINI_API_KEY) {
+        if (GeminiClient.hasApiKey()) {
             try {
-                const result = await this.callGeminiAPIForFeedback(prompt);
+                const result = await GeminiClient.processFeedback(prompt);
                 console.log('Gemini APIで修正要求処理成功');
                 // AI処理が成功した場合のみ成功メッセージを表示
-                this.showSuccessMessage('修正要求が正常に処理されました！');
+                MessageToast.success('修正要求が正常に処理されました！');
                 return result;
             } catch (error) {
                 console.error('Gemini API呼び出しに失敗しました:', error);
                 // APIが失敗した場合はフォールバック
                 const fallbackResult = this.processFeedbackRequest(feedbackText);
-                this.showFallbackMessage('AI APIに接続できませんでした。ローカル処理で修正要求を処理しました。');
+                MessageToast.warning('AI APIに接続できませんでした。ローカル処理で修正要求を処理しました。');
                 return fallbackResult;
             }
         } else {
             // APIキーが設定されていない場合はフォールバック
             const fallbackResult = this.processFeedbackRequest(feedbackText);
-            this.showFallbackMessage('AI APIキーが設定されていません。ローカル処理で修正要求を処理しました。');
+            MessageToast.warning('AI APIキーが設定されていません。ローカル処理で修正要求を処理しました。');
             return fallbackResult;
         }
     }
@@ -707,49 +682,31 @@ class FocusLauncher {
     }
 
     async generateHomeScreen(workflowText) {
-        // ブックマークを取得
+        // 新しいモジュールを使用（段階的移行）
         const bookmarks = await this.getBookmarks();
-        
-        // プロンプトにブックマーク情報を追加
-        let bookmarkContext = '';
-        if (bookmarks.length > 0) {
-            bookmarkContext = `\n\n関連するブックマーク（優先的に活用してください）:\n`;
-            bookmarks.forEach((bookmark, index) => {
-                bookmarkContext += `${index + 1}. ${bookmark.title}\n`;
-                bookmarkContext += `   URL: ${bookmark.url}\n`;
-                bookmarkContext += `   目的: ${bookmark.purpose}\n\n`;
-            });
-        }
-        
-        const prompt = CONFIG.PROMPT_TEMPLATE.replace('{workflow}', workflowText) + bookmarkContext;
-        
+        const prompt = PromptBuilder.buildHomeScreenPrompt(workflowText, bookmarks);
 
         // APIキーが設定されている場合はGemini APIを使用
-        if (CONFIG.GEMINI_API_KEY) {
+        if (GeminiClient.hasApiKey()) {
             try {
-                const result = await this.callGeminiAPI(workflowText, prompt);
+                const result = await GeminiClient.generateHomeScreen(prompt);
                 console.log('Gemini APIでワークフロー生成成功');
-
-                // ログを記録
-                // await this.saveLog('home_screen_generated', {
-                //     workflowText: workflowText,
-                //     aiResponse: result
-                // });
-
                 return result;
             } catch (error) {
                 console.error('Gemini API呼び出しに失敗しました:', error);
                 // APIが失敗した場合はフォールバック
                 const fallbackResult = this.generateMockAIResponse(workflowText);
-                this.showFallbackMessage('AI APIに接続できませんでした。ローカル処理でワークフローを生成しました。');
+                MessageToast.warning('AI APIに接続できませんでした。ローカル処理でワークフローを生成しました。');
                 return fallbackResult;
             }
         } else {
             // APIキーが設定されていない場合はモックデータを使用
             const fallbackResult = this.generateMockAIResponse(workflowText);
-            this.showFallbackMessage('AI APIキーが設定されていません。ローカル処理でワークフローを生成しました。');
+            MessageToast.warning('AI APIキーが設定されていません。ローカル処理でワークフローを生成しました。');
             return fallbackResult;
         }
+
+        // 既存のコードは削除（新しいモジュールに完全移行）
     }
 
     async callGeminiAPI(workflowText, customPrompt = null) {
@@ -1284,8 +1241,8 @@ class FocusLauncher {
             button.style.backgroundColor = "#aaa"; // グレーっぽくする
             button.disabled = true;
 
-            // Gemini APIに送信
-            const isSamePurpose = await callGeminiForConfirmation(this.currentWorkflow, userInput);
+            // Gemini APIに送信（新しいモジュールを使用）
+            const isSamePurpose = await GeminiClient.checkPurposeSimilarity(this.currentWorkflow.text, userInput);
         
             // 意図再確認履歴に追加
             const purposeCheck = {
@@ -1345,41 +1302,6 @@ class FocusLauncher {
         setTimeout(() => {
             input.focus();
         }, 100);
-    }
-}
-
-    // Gemini API を呼ぶ関数（true/falseのみ返す想定）
-async function callGeminiForConfirmation(pastPurposeText, currentPurposeText) {
-
-    console.log(pastPurposeText, "->", currentPurposeText);
-    const prompt = `
-    あなたは利用者のブラウザの利用目的が一貫しているかを判断するAIです。
-    完全に一致している必要はなく、内容が類似していればtrueを返してください（例：「研究計画書を書いて、関連文献を調べる」から「論文を広く調べる」に変わった場合はfalseを返してください）。
-    利用目的が変わった場合はfalseを返してください（例：「研究計画書を書く」から「ニュースを見る」に変わった場合はfalseを返してください）。
-    では以下の入力を確認してください：
-    過去の入力: "${pastPurposeText}"
-    現在の入力: "${currentPurposeText}"
-    出力は必ず true または false のみを返してください。
-    `;
-
-    try {
-        const response = await fetch(`${CONFIG.GEMINI_API_URL}?key=${CONFIG.GEMINI_API_KEY}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
-        });
-
-        const data = await response.json();
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-
-        console.log("[DEBUG] Gemini 応答:", rawText);
-
-        return rawText.toLowerCase().includes("true");
-    } catch (err) {
-        console.error("[ERROR] Gemini API 呼び出し失敗:", err);
-        return false;
     }
 }
 
