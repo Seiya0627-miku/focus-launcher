@@ -1,10 +1,12 @@
-// 振り返り画面の管理
+// 振り返り画面
 
 // 新しいモジュールをインポート（段階的移行）
-import { TimeFormatter } from './modules/utils/time-formatter.js';
-import { StorageManager } from './modules/core/storage-manager.js';
+import { TimeFormatter } from '../utils/time-formatter.js';
+import { StorageManager } from '../core/storage-manager.js';
+import { WorkflowManager } from '../core/workflow-manager.js';
+import { Logger } from '../core/logger.js';
 
-class ReflectionManager {
+export class ReflectionScreen {
     constructor() {
         this.visitedPages = [];
         this.init();
@@ -57,10 +59,10 @@ class ReflectionManager {
         sortedPages.forEach((page, index) => {
             const pageItem = document.createElement('div');
             pageItem.className = 'page-item';
-            
+
             // タイムスタンプをフォーマット
             const formattedTime = this.formatTimestamp(page.timestamp);
-            
+
             pageItem.innerHTML = `
                 <input type="checkbox" id="page-${index}" data-index="${index}">
                 <div class="page-info">
@@ -94,7 +96,7 @@ class ReflectionManager {
             // チェックされたページを取得
             const checkedPages = [];
             const checkboxes = document.querySelectorAll('#page-list input[type="checkbox"]:checked');
-            
+
             checkboxes.forEach(checkbox => {
                 const index = parseInt(checkbox.dataset.index);
                 // ソートされた配列から元のインデックスを取得
@@ -107,7 +109,7 @@ class ReflectionManager {
 
             // ホーム画面に戻る
             this.returnToHome();
-            
+
         } catch (error) {
             console.error('振り返りデータの保存に失敗しました:', error);
             alert('データの保存に失敗しました。もう一度お試しください。');
@@ -116,48 +118,41 @@ class ReflectionManager {
 
     async savePageEvaluations(regrettedPages) {
         try {
-            // 現在のワークフロー情報を取得
-            const result = await chrome.storage.local.get(['currentWorkflow']);
-            const currentWorkflow = result.currentWorkflow;
-    
+            // 新しいモジュールを使用（段階的移行）
+            const currentWorkflow = await WorkflowManager.getCurrent();
+
             if (!currentWorkflow) {
                 console.error('ワークフロー情報が見つかりません');
                 return;
             }
-    
+
             // 各ページの評価を作成
             const pageEvaluations = this.visitedPages.map(page => ({
                 evaluation: regrettedPages.some(regretted => regretted.url === page.url) ? 0 : 1, // 0:後悔なし 1:後悔あり
                 timestamp: page.timestamp
             }));
-    
+
             // 統一ログを作成
             const temp = await chrome.storage.local.get(['reflectionTime']);
 
-            const unifiedLog = {
+            const unifiedLog = Logger.createWorkflowCompletedLog({
                 workflowText: currentWorkflow.text,
-                startTime: currentWorkflow.timestamp, // 既存のtimestampを使用
-                reflectionTime: temp.reflectionTime, // 振り返り開始
-                endTime: Date.now(), // 振り返り終了（ワークフロー終了）
+                startTime: currentWorkflow.timestamp,
+                reflectionTime: temp.reflectionTime,
+                endTime: Date.now(),
                 fixRequests: currentWorkflow.fixRequests || [],
                 purposeChecks: currentWorkflow.purposeChecks || [],
                 pageEvaluations: pageEvaluations
-            };
-    
-            // ログを記録
-            await chrome.runtime.sendMessage({
-                action: 'saveLog',
-                eventType: 'workflow_completed',
-                data: unifiedLog
             });
-    
-            // visitedPagesをクリア
-            await chrome.storage.local.remove(['currentWorkflowVisitedPages']);
-            // ワークフローをクリア
-            await chrome.storage.local.remove(['currentWorkflow']);
+
+            // ログを記録
+            await Logger.save('workflow_completed', unifiedLog);
+
+            // ワークフローを終了（新しいモジュールを使用）
+            await WorkflowManager.end();
 
             console.log('統一ログを保存しました:', unifiedLog);
-    
+
         } catch (error) {
             console.error('統一ログの保存に失敗しました:', error);
             throw error;
@@ -166,8 +161,8 @@ class ReflectionManager {
 
     async returnToHome() {
         // ワークフロー終了後、新しいタブで入力画面を開く
-        chrome.tabs.create({ url: chrome.runtime.getURL('newtab.html') });
-        
+        chrome.tabs.create({ url: chrome.runtime.getURL('views/newtab.html') });
+
         // 現在の振り返り画面のタブを閉じる
         chrome.tabs.getCurrent().then(currentTab => {
             if (currentTab) {
@@ -176,8 +171,3 @@ class ReflectionManager {
         });
     }
 }
-
-// 振り返り画面の初期化
-document.addEventListener('DOMContentLoaded', () => {
-    new ReflectionManager();
-});

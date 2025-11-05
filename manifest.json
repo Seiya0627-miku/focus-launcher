@@ -20,16 +20,20 @@
   "web_accessible_resources": [
   {
     "resources": [
-      "popup.html", 
-      "popup.js", 
-      "popup.css", 
+      "views/popup.html",
+      "views/popup.js",
+      "views/popup.css",
       "config.js",
-      "consent-screen.html",
-      "consent-screen.css", 
-      "consent-screen.js",
-      "reflection.html",
-      "reflection.css",
-      "reflection.js"
+      "views/consent-screen.html",
+      "views/consent-screen.css",
+      "views/consent-screen.js",
+      "views/reflection.html",
+      "views/reflection.css",
+      "views/reflection.js",
+      "views/newtab.html",
+      "views/newtab.css",
+      "views/newtab.js",
+      "modules/**/*.js"
     ],
     "matches": ["<all_urls>"]
   }],
@@ -42,10 +46,10 @@
   },
 
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "views/popup.html",
     "default_title": "Focus Launcher"
   },
   "chrome_url_overrides": {
-    "newtab": "newtab.html"
+    "newtab": "views/newtab.html"
   }
 }

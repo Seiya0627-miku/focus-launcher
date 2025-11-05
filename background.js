@@ -252,7 +252,7 @@ chrome.idle.onStateChanged.addListener((newState) => {
 
 // 新しいタブを開き overlay を実行
 function openOverlayTab() {
-    chrome.tabs.create({ url: "newtab.html" }, (tab) => {
+    chrome.tabs.create({ url: "views/newtab.html" }, (tab) => {
         console.log("[DEBUG] 新しいタブを開きました", tab.id);
 
         // タブの読み込み完了を待つ

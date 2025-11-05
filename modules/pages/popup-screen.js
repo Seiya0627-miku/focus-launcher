@@ -1,9 +1,10 @@
-// Focus Launcher - ポップアップ用スクリプト
+// Focus Launcher - ポップアップ画面
 
 // 新しいモジュールをインポート（段階的移行）
-import { UrlValidator } from './modules/utils/url-validator.js';
+import { UrlValidator } from '../utils/url-validator.js';
+import { Logger } from '../core/logger.js';
 
-class PopupManager {
+export class PopupScreen {
     constructor() {
         this.init();
     }
@@ -39,7 +40,7 @@ class PopupManager {
     async updateUI() {
         try {
             const result = await chrome.storage.local.get(['currentWorkflow']);
-            
+
             if (result.currentWorkflow) {
                 this.showActiveWorkflow(result.currentWorkflow);
             } else {
@@ -77,9 +78,9 @@ class PopupManager {
     async showReflectionScreen() {
         try {
             // 振り返り画面を新しいタブで開く
-            const reflectionUrl = chrome.runtime.getURL('reflection.html');
+            const reflectionUrl = chrome.runtime.getURL('views/reflection.html');
             await chrome.tabs.create({ url: reflectionUrl });
-            
+
             // ポップアップを閉じる
             window.close();
             // 現在のタブを閉じる
@@ -118,7 +119,7 @@ class PopupManager {
             'この操作は取り消せません。\n\n' +
             '本当にリセットしますか？'
         );
-        
+
         if (confirmed) {
             this.resetUserData();
         }
@@ -129,21 +130,21 @@ class PopupManager {
             // 現在のワークフローを取得
             const result = await chrome.storage.local.get(['currentWorkflow']);
             const currentWorkflow = result.currentWorkflow;
-            
+
             if (!currentWorkflow) {
                 alert('ワークフローが開始されていません。まず新しいタブでワークフローを開始してください。');
                 return;
             }
-            
+
             // 現在のタブ情報を取得
             const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
             const currentTab = tabs[0];
-            
+
             if (!currentTab || !currentTab.url) {
                 alert('ブックマークできるページがありません');
                 return;
             }
-            
+
             // 無効なURLをチェック（新しいモジュールを使用）
             if (!UrlValidator.isBookmarkable(currentTab.url)) {
                 alert('このページはブックマークできません');
@@ -157,7 +158,7 @@ class PopupManager {
             //     alert('このページはブックマークできません');
             //     return;
             // }
-            
+
             // ブックマークデータを作成
             const bookmark = {
                 id: `bookmark_${Date.now()}`,
@@ -166,65 +167,69 @@ class PopupManager {
                 purpose: currentWorkflow.text, // ワークフローの目的を直接使用
                 createdAt: new Date().toISOString()
             };
-            
+
             // ブックマークを保存
             await this.saveBookmark(bookmark);
-            
+
             // 成功メッセージ
             this.showBookmarkSuccessMessage(bookmark.title);
-            
+
         } catch (error) {
             console.error('ブックマークの保存に失敗しました:', error);
             alert('ブックマークの保存に失敗しました');
         }
     }
-    
+
     async saveBookmark(bookmark) {
         try {
             const result = await chrome.storage.local.get(['bookmarks']);
             const bookmarks = result.bookmarks || [];
-            
+
             // 重複チェック（同じURLと目的の組み合わせ）
-            const isDuplicate = bookmarks.some(existing => 
+            const isDuplicate = bookmarks.some(existing =>
                 existing.url === bookmark.url && existing.purpose === bookmark.purpose
             );
-            
+
             if (isDuplicate) {
                 alert('同じ目的でこのページは既にブックマークされています');
                 return;
             }
-            
+
             bookmarks.push(bookmark);
-            
+
             await chrome.storage.local.set({ bookmarks: bookmarks });
-            
-            // ログに記録
-            await chrome.runtime.sendMessage({
-                action: 'saveLog',
-                eventType: 'bookmark_created',
-                data: {
-                    bookmarkId: bookmark.id,
-                    url: bookmark.url,
-                    purpose: bookmark.purpose
-                }
-            });
-            
+
+            // ログに記録（新しいモジュールを使用）
+            const logData = Logger.createBookmarkLog(bookmark.id, bookmark.url, bookmark.purpose);
+            await Logger.save('bookmark_created', logData);
+
+            // 既存のコードは残す（念のため）
+            // await chrome.runtime.sendMessage({
+            //     action: 'saveLog',
+            //     eventType: 'bookmark_created',
+            //     data: {
+            //         bookmarkId: bookmark.id,
+            //         url: bookmark.url,
+            //         purpose: bookmark.purpose
+            //     }
+            // });
+
             console.log('ブックマークを保存しました:', bookmark.title);
-            
+
         } catch (error) {
             console.error('ブックマーク保存エラー:', error);
             throw error;
         }
     }
-    
+
     showBookmarkSuccessMessage(title) {
         // ポップアップ内で成功メッセージを表示
         const statusText = document.getElementById('status-text');
         const originalText = statusText.textContent;
-        
+
         statusText.textContent = `「${title}」をブックマークしました`;
         statusText.style.color = '#ffffff';
-        
+
         // 2秒後に元に戻す
         setTimeout(() => {
             statusText.textContent = originalText;
@@ -236,15 +241,15 @@ class PopupManager {
         try {
             // すべての実験データを取得
             const result = await chrome.storage.local.get([
-                'experimentId', 
-                'consentGiven', 
-                'firstUsedAt', 
+                'experimentId',
+                'consentGiven',
+                'firstUsedAt',
                 'currentWorkflow',
                 'currentWorkflowVisitedPages', // 追加
-                'bookmarks', 
+                'bookmarks',
                 'logs'
             ]);
-            
+
             // エクスポート用データを整理
             const exportData = {
                 experimentId: result.experimentId,
@@ -255,37 +260,37 @@ class PopupManager {
                 exportTimestamp: new Date().toISOString(),
                 exportVersion: "1.2.0"
             };
-            
+
             // JSONファイルとしてダウンロード
             const dataStr = JSON.stringify(exportData, null, 2);
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            
+
             const url = URL.createObjectURL(dataBlob);
             const link = document.createElement('a');
             link.href = url;
             link.download = `focus-launcher-data-${result.experimentId || 'unknown'}-${new Date().toISOString().split('T')[0]}.json`;
-            
+
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            
+
             // 成功メッセージ
             this.showExportSuccessMessage();
-            
+
         } catch (error) {
             console.error('データエクスポートに失敗しました:', error);
             alert('データエクスポートに失敗しました。もう一度お試しください。');
         }
     }
-    
+
     showExportSuccessMessage() {
         const statusText = document.getElementById('status-text');
         const originalText = statusText.textContent;
-        
+
         statusText.textContent = '実験データをエクスポートしました';
         statusText.style.color = '#ffffff';
-        
+
         setTimeout(() => {
             statusText.textContent = originalText;
             statusText.style.color = '';
@@ -299,17 +304,17 @@ class PopupManager {
             const response = await chrome.runtime.sendMessage({
                 action: 'resetUserData'
             });
-            
+
             if (response.success) {
                 // 成功メッセージを表示
                 this.showResetSuccessMessage();
-                
+
                 // 現在のタブをリロード
                 const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
                 if (tabs[0]) {
                     await chrome.tabs.reload(tabs[0].id);
                 }
-                
+
                 // ポップアップを閉じる
                 setTimeout(() => {
                     window.close();
@@ -346,8 +351,3 @@ class PopupManager {
         document.body.appendChild(messageDiv);
     }
 }
-
-// ポップアップの初期化
-document.addEventListener('DOMContentLoaded', () => {
-    new PopupManager();
-}); 

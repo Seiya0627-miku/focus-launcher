@@ -1,17 +1,26 @@
 // Focus Launcher - メインロジック
 
 // 新しいモジュールをインポート（段階的移行）
-import { MessageToast } from './modules/ui/message-toast.js';
-import { UrlValidator } from './modules/utils/url-validator.js';
-import { StorageManager } from './modules/core/storage-manager.js';
-import { GeminiClient } from './modules/ai/gemini-client.js';
-import { PromptBuilder } from './modules/ai/prompt-builder.js';
+import { MessageToast } from '../modules/pages/message-toast.js';
+import { UrlValidator } from '../modules/utils/url-validator.js';
+import { StorageManager } from '../modules/core/storage-manager.js';
+import { WorkflowManager } from '../modules/core/workflow-manager.js';
+import { Logger } from '../modules/core/logger.js';
+import { GeminiClient } from '../modules/ai/gemini-client.js';
+import { PromptBuilder } from '../modules/ai/prompt-builder.js';
+import { PageTracker } from '../modules/features/page-tracker.js';
+import { FeedbackProcessor } from '../modules/features/feedback-processor.js';
+import { IdleOverlay } from '../modules/features/idle-overlay.js';
+import { HomeScreen } from '../modules/pages/home-screen.js';
+import { WorkflowScreen } from '../modules/pages/workflow-screen.js';
 
 class FocusLauncher {
     constructor() {
         this.currentWorkflow = null;
         this.isRefreshing = false;
         this.visitedPages = []; // ワークフロー中にアクセスしたページを追跡
+        this.pageTracker = new PageTracker();  // ページトラッカー
+        this.idleOverlay = new IdleOverlay();  // アイドルオーバーレイ
         this.init();
         this.setupMessageListener();
     }
@@ -1007,7 +1016,7 @@ class FocusLauncher {
     // 振り返り画面に遷移する関数
     async showReflectionScreen() {
         // 振り返り画面を新しいタブで開く
-        const reflectionUrl = chrome.runtime.getURL('reflection.html');
+        const reflectionUrl = chrome.runtime.getURL('views/reflection.html');
         await chrome.tabs.create({ url: reflectionUrl });
         await chrome.storage.local.set({ reflectionTime: Date.now() });
         // 現在のタブを閉じる
@@ -1019,16 +1028,18 @@ class FocusLauncher {
 
     // ワークフローを終了する関数
     async endWorkflow() {
-        // ワークフロー情報をクリア
-        this.currentWorkflow = null;
-        await chrome.storage.local.remove(['currentWorkflow']);
+        // 新しいモジュールを使用（段階的移行）
+        await WorkflowManager.end();
 
-        // visitedPagesもクリア
+        // ローカル変数もクリア
+        this.currentWorkflow = null;
         this.visitedPages = [];
-        await chrome.storage.local.remove(['currentWorkflowVisitedPages']);
 
         this.showWorkflowInput();
-        console.log('ワークフローを終了しました');
+
+        // 既存のコードは削除（新しいモジュールに完全移行）
+        // await chrome.storage.local.remove(['currentWorkflow']);
+        // await chrome.storage.local.remove(['currentWorkflowVisitedPages']);
     }
 
     showWorkflowInput() {
@@ -1156,10 +1167,10 @@ class FocusLauncher {
     showConsentScreen() {
         // 現在のコンテンツを隠す
         document.getElementById('app').style.display = 'none';
-        
+
         // 確認画面を表示
         const consentFrame = document.createElement('iframe');
-        consentFrame.src = chrome.runtime.getURL('consent-screen.html');
+        consentFrame.src = chrome.runtime.getURL('views/consent-screen.html');
         consentFrame.style.cssText = `
             position: fixed;
             top: 0;
