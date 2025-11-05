@@ -1,5 +1,7 @@
-// 確認画面の管理
-class ConsentScreenManager {
+// 確認画面
+import { MessageToast } from './message-toast.js';
+
+export class ConsentScreen {
     constructor() {
         this.experimentId = null;
         this.init();
@@ -23,7 +25,7 @@ class ConsentScreenManager {
             const response = await chrome.runtime.sendMessage({
                 action: 'generateExperimentId'
             });
-            
+
             this.experimentId = response.experimentId;
             document.getElementById('experiment-id').textContent = this.experimentId;
         } catch (error) {
@@ -48,15 +50,15 @@ class ConsentScreenManager {
                 action: 'completeFirstTimeSetup',
                 experimentId: this.experimentId
             });
-            
+
             // 成功メッセージを表示
             this.showSuccessMessage();
-            
+
             // 1秒後に新しいタブを開く
             setTimeout(() => {
                 chrome.runtime.sendMessage({ action: 'reloadPage' });
             }, 1000);
-            
+
         } catch (error) {
             console.error('設定の保存に失敗しました:', error);
             alert('設定の保存に失敗しました。もう一度お試しください。');
@@ -64,6 +66,7 @@ class ConsentScreenManager {
     }
 
     showSuccessMessage() {
+        // 新しいモジュールを使用できるが、既存の実装を維持（カスタムスタイル）
         const messageDiv = document.createElement('div');
         messageDiv.style.cssText = `
             position: fixed;
@@ -85,10 +88,8 @@ class ConsentScreenManager {
             <div style="font-size: 0.9rem; margin-top: 10px;">新しいタブに移動します...</div>
         `;
         document.body.appendChild(messageDiv);
+
+        // 代替案（MessageToastを使う場合）：
+        // MessageToast.success(`✅ 設定完了\n実験ID: ${this.experimentId}\n新しいタブに移動します...`, 1000);
     }
 }
-
-// 確認画面の初期化
-document.addEventListener('DOMContentLoaded', () => {
-    new ConsentScreenManager();
-});

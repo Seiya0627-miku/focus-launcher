@@ -1,15 +1,53 @@
 // Focus Launcher - メインロジック
+
+// 新しいモジュールをインポート（段階的移行）
+import { MessageToast } from '../modules/pages/message-toast.js';
+import { UrlValidator } from '../modules/utils/url-validator.js';
+import { StorageManager } from '../modules/core/storage-manager.js';
+import { WorkflowManager } from '../modules/core/workflow-manager.js';
+import { Logger } from '../modules/core/logger.js';
+import { GeminiClient } from '../modules/ai/gemini-client.js';
+import { PromptBuilder } from '../modules/ai/prompt-builder.js';
+import { PageTracker } from '../modules/features/page-tracker.js';
+import { FeedbackProcessor } from '../modules/features/feedback-processor.js';
+import { IdleOverlay } from '../modules/features/idle-overlay.js';
+import { HomeScreen } from '../modules/pages/home-screen.js';
+import { WorkflowScreen } from '../modules/pages/workflow-screen.js';
+
 class FocusLauncher {
     constructor() {
         this.currentWorkflow = null;
         this.isRefreshing = false;
+        this.visitedPages = []; // ワークフロー中にアクセスしたページを追跡
+        this.pageTracker = new PageTracker();  // ページトラッカー
+        this.idleOverlay = new IdleOverlay();  // アイドルオーバーレイ
         this.init();
         this.setupMessageListener();
     }
 
-    init() {
+    async init() {
         this.bindEvents();
         this.checkFirstTimeUser();
+        // ページトラッキングは両方で実行（background.jsとnewtab.jsの両方）
+        this.setupPageTracking();
+        await this.restoreVisitedPages();
+        await this.checkOverlay();
+    }
+
+    // ページリロード時にvisitedPagesを復元
+    async restoreVisitedPages() {
+        // 新しいモジュールを使用（段階的移行）
+        this.visitedPages = await StorageManager.getVisitedPages();
+
+        // 既存のコードは残す（念のため）
+        // try {
+        //     const result = await chrome.storage.local.get(['currentWorkflowVisitedPages']);
+        //     if (result.currentWorkflowVisitedPages) {
+        //         this.visitedPages = result.currentWorkflowVisitedPages;
+        //     }
+        // } catch (error) {
+        //     console.error('visitedPagesの復元に失敗しました:', error);
+        // }
     }
 
     bindEvents() {
@@ -20,7 +58,7 @@ class FocusLauncher {
 
         // ワークフロー終了ボタン
         document.getElementById('end-workflow').addEventListener('click', () => {
-            this.endWorkflow();
+            this.showReflectionScreen();
         });
 
         // 修正要求送信ボタン
@@ -30,7 +68,7 @@ class FocusLauncher {
 
         // 修正要求セクションのワークフロー終了ボタン
         document.getElementById('end-workflow-feedback').addEventListener('click', () => {
-            this.endWorkflow();
+            this.showReflectionScreen();
         });
 
         // Enterキーでワークフロー開始
@@ -55,17 +93,6 @@ class FocusLauncher {
             }
         });
 
-        // ホーム画面のリンククリックを監視
-        document.addEventListener('click', (e) => {
-            if (e.target.tagName === 'A' && e.target.href) {
-                this.saveLog('link_clicked', {
-                    url: e.target.href,
-                    text: e.target.textContent,
-                    timestamp: Date.now()
-                });
-            }
-        });
-
         // ページのリロードを検知
         window.addEventListener('beforeunload', () => {
             this.isRefreshing = true;
@@ -74,9 +101,77 @@ class FocusLauncher {
         // ブラウザの閉じるイベントを監視（実際のブラウザ閉じる時のみ）
         window.addEventListener('unload', () => {
             if (!this.isRefreshing) {
-                this.endWorkflow();
+                this.showReflectionScreen();
             }
         });
+    }
+
+    // ページ遷移の追跡を設定
+    setupPageTracking() {
+        try {
+            // タブの更新を監視
+            chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+                if (changeInfo.status === 'complete' && tab.url && this.currentWorkflow) {
+                    this.trackPageVisit(tab);
+                }
+            });
+
+            // タブの切り替えを監視
+            chrome.tabs.onActivated.addListener((activeInfo) => {
+                chrome.tabs.get(activeInfo.tabId, (tab) => {
+                    if (tab && tab.url && this.currentWorkflow) {
+                        this.trackPageVisit(tab);
+                    }
+                });
+            });
+            console.log('[PAGE TRACKING] newtab.jsでページトラッキングを開始しました');
+        } catch (error) {
+            console.error('[PAGE TRACKING] newtab.jsでのページトラッキング設定に失敗:', error);
+        }
+    }
+
+    // ページ訪問を追跡
+    async trackPageVisit(tab) {
+        if (!this.currentWorkflow || !tab.url) return;
+
+        // 内部ページを除外（新しいモジュールを使用）
+        if (!UrlValidator.isTrackable(tab.url)) {
+            return;
+        }
+
+        // 既存のコードは残す（念のため）
+        // if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+        //     return;
+        // }
+
+        const pageInfo = {
+            title: tab.title || '無題のページ',
+            url: tab.url,
+            timestamp: Date.now()
+        };
+
+        // 重複チェック（同じURLで最近アクセスした場合は除外）
+        const recentVisit = this.visitedPages.find(page => 
+            page.url === tab.url && 
+            (Date.now() - page.timestamp) < 3000 // 3秒以内
+        );
+
+        if (!recentVisit) {
+            this.visitedPages.push(pageInfo);
+
+            // localStorageに保存
+            await this.saveVisitedPagesToStorage();
+        }
+    }
+
+    async saveVisitedPagesToStorage() {
+        try {
+            await chrome.storage.local.set({ 
+                currentWorkflowVisitedPages: this.visitedPages 
+            });
+        } catch (error) {
+            console.error('visitedPagesの保存に失敗しました:', error);
+        }
     }
 
     async saveLog(eventType, data) {
@@ -91,59 +186,72 @@ class FocusLauncher {
         }
     }
 
-    // リンクの差分を計算する関数
-    calculateLinkDiff(oldActions, newActions) {
-        const oldUrls = new Set(oldActions?.map(action => action.url) || []);
-        const newUrls = new Set(newActions?.map(action => action.url) || []);
-        
-        const addedLinks = newActions?.filter(action => !oldUrls.has(action.url)) || [];
-        const removedLinks = oldActions?.filter(action => !newUrls.has(action.url)) || [];
-        
-        return {
-            added: addedLinks.map(link => ({
-                title: link.title,
-                url: link.url,
-                description: link.description
-            })),
-            removed: removedLinks.map(link => ({
-                title: link.title,
-                url: link.url,
-                description: link.description
-            }))
-        };
-    }
-
     async loadCurrentWorkflow() {
-        try {
-            const result = await chrome.storage.local.get(['currentWorkflow']);
-            console.log('ストレージから取得したデータ:', result);
-            
-            if (result.currentWorkflow && result.currentWorkflow.text) {
-                this.currentWorkflow = result.currentWorkflow;
-                
-                // ワークフローが存在する場合は、直接ホーム画面を表示
-                this.showHomeScreen();
-                this.updateHomeScreen();
-                
-                console.log('既存のワークフローを復元しました:', this.currentWorkflow.text);
-            } else {
-                this.showWorkflowInput();
-                console.log('新しいワークフローを開始します');
-            }
-        } catch (error) {
-            console.error('ワークフローの読み込みに失敗しました:', error);
+        // 新しいモジュールを使用（段階的移行）
+        const currentWorkflow = await StorageManager.getCurrentWorkflow();
+        console.log('ストレージから取得したデータ:', currentWorkflow);
+
+        if (currentWorkflow && currentWorkflow.text) {
+            this.currentWorkflow = currentWorkflow;
+
+            // ワークフローが存在する場合は、直接ホーム画面を表示
+            this.showHomeScreen();
+            this.updateHomeScreen();
+
+            console.log('既存のワークフローを復元しました:', this.currentWorkflow.text);
+        } else {
             this.showWorkflowInput();
+            console.log('新しいワークフローを開始します');
         }
+
+        // 既存のコードは残す（念のため）
+        // try {
+        //     const result = await chrome.storage.local.get(['currentWorkflow']);
+        //     console.log('ストレージから取得したデータ:', result);
+        //
+        //     if (result.currentWorkflow && result.currentWorkflow.text) {
+        //         this.currentWorkflow = result.currentWorkflow;
+        //
+        //         // ワークフローが存在する場合は、直接ホーム画面を表示
+        //         this.showHomeScreen();
+        //         this.updateHomeScreen();
+        //
+        //         console.log('既存のワークフローを復元しました:', this.currentWorkflow.text);
+        //     } else {
+        //         this.showWorkflowInput();
+        //         console.log('新しいワークフローを開始します');
+        //     }
+        // } catch (error) {
+        //     console.error('ワークフローの読み込みに失敗しました:', error);
+        //     this.showWorkflowInput();
+        // }
     }
 
     async startWorkflow() {
         const workflowText = document.getElementById('workflow-textarea').value.trim();
-        
+    
         if (!workflowText) {
-            alert('作業目的を入力してください');
+            alert('作業目的を入力してください。');
             return;
         }
-
+    
+        // ページ追跡をリセット
+        this.visitedPages = [];
+        await chrome.storage.local.remove(['currentWorkflowVisitedPages']);
+    
+        // ワークフロー情報を設定
+        this.currentWorkflow = {
+            text: workflowText,
+            timestamp: Date.now(),
+            aiContent: null,
+            feedback: null,
+            fixRequests: [], // 修正要求履歴を追加
+            purposeChecks: [] // 意図の再確認履歴
+        };
+    
+        // ストレージに保存
+        await chrome.storage.local.set({ currentWorkflow: this.currentWorkflow });
+    
         this.showLoadingScreen();
 
         try {
@@ -151,19 +259,12 @@ class FocusLauncher {
             const aiResponse = await this.generateHomeScreen(workflowText);
             
             this.currentWorkflow = {
-                text: workflowText,
-                timestamp: Date.now(),
+                ...this.currentWorkflow,
                 aiContent: aiResponse
             };
 
             // ストレージに保存
             await chrome.storage.local.set({ currentWorkflow: this.currentWorkflow });
-
-            // ログを記録
-            await this.saveLog('workflow_started', {
-                workflowText: workflowText,
-                timestamp: this.currentWorkflow.timestamp
-            });
 
             this.showHomeScreen();
             this.updateHomeScreen();
@@ -185,44 +286,32 @@ class FocusLauncher {
             return;
         }
 
-        console.log('修正要求を受信:', feedbackText);
-
         // ワークフロー終了の要求かチェック
         if (feedbackText.toLowerCase().includes('ワークフローを終了') || 
             feedbackText.toLowerCase().includes('終了') ||
             feedbackText.toLowerCase().includes('やめる')) {
-            this.endWorkflow();
+            this.showReflectionScreen();
             return;
         }
 
         this.showLoadingScreen();
 
         try {
-            console.log('修正要求shori:', feedbackText);
-            // 修正前の状態を保存
-            const previousActions = this.currentWorkflow?.aiContent?.actions || [];
-            
+            console.log('修正要求処理:', feedbackText);
+
+            // 修正要求を履歴に追加
+            const fixRequest = {
+                text: feedbackText,
+                timestamp: Date.now()
+            };
+            this.currentWorkflow.fixRequests.push(fixRequest);
+         
             // Gemini APIを呼び出して修正要求を処理
             const aiResponse = await this.processFeedbackWithAI(feedbackText);
             
-            // 修正後の状態
-            const newActions = aiResponse?.actions || [];
-            
-            // リンクの差分を計算
-            const linkDiff = this.calculateLinkDiff(previousActions, newActions);
-            
-            // ログを記録（差分のみ）
-            await this.saveLog('home_screen_modified', {
-                feedbackText: feedbackText,
-                linkChanges: linkDiff,
-                totalLinksBefore: previousActions.length,
-                totalLinksAfter: newActions.length
-            });
-            
             // ワークフローを更新
             this.currentWorkflow = {
-                text: this.currentWorkflow.text,
-                timestamp: Date.now(),
+                ...this.currentWorkflow,
                 aiContent: aiResponse,
                 feedback: feedbackText
             };
@@ -237,8 +326,6 @@ class FocusLauncher {
             document.getElementById('feedback-textarea').value = '';
             console.log('修正要求を処理しました:', feedbackText);
             
-            // 成功メッセージは processFeedbackWithAI 内で適切に表示されるため、ここでは表示しない
-
         } catch (error) {
             console.error('修正要求の処理に失敗しました:', error);
             alert('修正要求の処理に失敗しました。もう一度お試しください。');
@@ -247,69 +334,42 @@ class FocusLauncher {
     }
 
     async processFeedbackWithAI(feedbackText) {
-        // 既存のワークフロー情報と修正要求を組み合わせてAIに送信
-        const currentActions = this.currentWorkflow.aiContent.actions;
-        const currentTitle = this.currentWorkflow.aiContent.title;
-        const currentContent = this.currentWorkflow.aiContent.content;
-        
-        const prompt = `
-現在のワークフロー情報：
-- タイトル: ${currentTitle}
-- 内容: ${currentContent}
-- 現在のツール: ${currentActions.map(a => a.title).join(', ')}
+        // 新しいモジュールを使用（段階的移行）
+        const prompt = PromptBuilder.buildFeedbackPrompt(this.currentWorkflow, feedbackText);
 
-ユーザーからの修正要求: ${feedbackText}
+        // 既存のコードは削除（新しいモジュールに完全移行）
+        // const currentActions = this.currentWorkflow.aiContent.actions;
+        // const currentTitle = this.currentWorkflow.aiContent.title;
+        // const currentContent = this.currentWorkflow.aiContent.content;
+        //
+        // const prompt = `
+        // 現在のワークフロー情報：
+        // - タイトル: ${currentTitle}
+        // - 内容: ${currentContent}
+        // - 現在のツール: ${currentActions.map(a => a.title).join(', ')}
+        //
+        // ユーザーからの修正要求: ${feedbackText}
 
-上記の修正要求に基づいて、以下のJSON形式で応答してください：
-{
-    "title": "更新されたタイトル",
-    "content": "更新された内容（HTML形式）",
-    "actions": [
-        {
-            "title": "ツール名",
-            "description": "説明",
-            "url": "URL",
-            "icon": "絵文字アイコン"
-        }
-    ]
-}
-
-注意事項：
-- 既存のツールはurl含めて原則変更しないでください（例：https://slides.google.comをhttps://docs.google.com/presentation/に変更しないでください）
-- 削除要求があれば該当ツールを除外してください
-- 追加要求があれば、既存のjsonの後ろに新しいツールの情報を追加してください
-- 重複は避けてください
-- 実用的で関連性の高いツールを提案してください
-- 論文を広く調べる必要がある場合はPaperDive（https://www.paperdive.app/）を必ず含める
-- Google Driveは常に含める（ファイル管理のため）
-- Google Workspaceツール（Docs、Slides、Sheets、Drive、Mailなど）は以下のURL形式で統一してください：
-  * Google Docs: https://docs.google.com
-  * Google Slides: https://slides.google.com
-  * その他についても以上と同様にしてください
-- ツール名はそのまま表示し、余計な情報（「構成検討」など）は付けないでください
-`;
-
-        console.log('AIに送信するプロンプト:', prompt);
 
         // APIキーが設定されている場合はGemini APIを使用
-        if (CONFIG.GEMINI_API_KEY) {
+        if (GeminiClient.hasApiKey()) {
             try {
-                const result = await this.callGeminiAPIForFeedback(prompt);
+                const result = await GeminiClient.processFeedback(prompt);
                 console.log('Gemini APIで修正要求処理成功');
                 // AI処理が成功した場合のみ成功メッセージを表示
-                this.showSuccessMessage('修正要求が正常に処理されました！');
+                MessageToast.success('修正要求が正常に処理されました！');
                 return result;
             } catch (error) {
                 console.error('Gemini API呼び出しに失敗しました:', error);
                 // APIが失敗した場合はフォールバック
                 const fallbackResult = this.processFeedbackRequest(feedbackText);
-                this.showFallbackMessage('AI APIに接続できませんでした。ローカル処理で修正要求を処理しました。');
+                MessageToast.warning('AI APIに接続できませんでした。ローカル処理で修正要求を処理しました。');
                 return fallbackResult;
             }
         } else {
             // APIキーが設定されていない場合はフォールバック
             const fallbackResult = this.processFeedbackRequest(feedbackText);
-            this.showFallbackMessage('AI APIキーが設定されていません。ローカル処理で修正要求を処理しました。');
+            MessageToast.warning('AI APIキーが設定されていません。ローカル処理で修正要求を処理しました。');
             return fallbackResult;
         }
     }
@@ -437,29 +497,32 @@ class FocusLauncher {
     }
 
     showSuccessMessage(message) {
-        // 成功メッセージを一時的に表示
-        const successDiv = document.createElement('div');
-        successDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #4CAF50;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 10000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            font-weight: 500;
-        `;
-        successDiv.textContent = message;
-        document.body.appendChild(successDiv);
-        
-        // 3秒後に自動削除
-        setTimeout(() => {
-            if (successDiv.parentNode) {
-                successDiv.parentNode.removeChild(successDiv);
-            }
-        }, 3000);
+        // 新しいモジュールを使用（段階的移行）
+        MessageToast.success(message);
+
+        // 既存のコードは残す（念のため）
+        // const successDiv = document.createElement('div');
+        // successDiv.style.cssText = `
+        //     position: fixed;
+        //     top: 20px;
+        //     right: 20px;
+        //     background: #4CAF50;
+        //     color: white;
+        //     padding: 15px 20px;
+        //     border-radius: 8px;
+        //     z-index: 10000;
+        //     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        //     font-weight: 500;
+        // `;
+        // successDiv.textContent = message;
+        // document.body.appendChild(successDiv);
+        //
+        // // 3秒後に自動削除
+        // setTimeout(() => {
+        //     if (successDiv.parentNode) {
+        //         successDiv.parentNode.removeChild(successDiv);
+        //     }
+        // }, 3000);
     }
 
     extractRemoveRequests(feedbackText) {
@@ -628,49 +691,31 @@ class FocusLauncher {
     }
 
     async generateHomeScreen(workflowText) {
-        // ブックマークを取得
+        // 新しいモジュールを使用（段階的移行）
         const bookmarks = await this.getBookmarks();
-        
-        // プロンプトにブックマーク情報を追加
-        let bookmarkContext = '';
-        if (bookmarks.length > 0) {
-            bookmarkContext = `\n\n関連するブックマーク（優先的に活用してください）:\n`;
-            bookmarks.forEach((bookmark, index) => {
-                bookmarkContext += `${index + 1}. ${bookmark.title}\n`;
-                bookmarkContext += `   URL: ${bookmark.url}\n`;
-                bookmarkContext += `   目的: ${bookmark.purpose}\n\n`;
-            });
-        }
-        
-        const prompt = CONFIG.PROMPT_TEMPLATE.replace('{workflow}', workflowText) + bookmarkContext;
-        
+        const prompt = PromptBuilder.buildHomeScreenPrompt(workflowText, bookmarks);
 
         // APIキーが設定されている場合はGemini APIを使用
-        if (CONFIG.GEMINI_API_KEY) {
+        if (GeminiClient.hasApiKey()) {
             try {
-                const result = await this.callGeminiAPI(workflowText, prompt);
+                const result = await GeminiClient.generateHomeScreen(prompt);
                 console.log('Gemini APIでワークフロー生成成功');
-
-                // ログを記録
-                await this.saveLog('home_screen_generated', {
-                    workflowText: workflowText,
-                    aiResponse: result
-                });
-
                 return result;
             } catch (error) {
                 console.error('Gemini API呼び出しに失敗しました:', error);
                 // APIが失敗した場合はフォールバック
                 const fallbackResult = this.generateMockAIResponse(workflowText);
-                this.showFallbackMessage('AI APIに接続できませんでした。ローカル処理でワークフローを生成しました。');
+                MessageToast.warning('AI APIに接続できませんでした。ローカル処理でワークフローを生成しました。');
                 return fallbackResult;
             }
         } else {
             // APIキーが設定されていない場合はモックデータを使用
             const fallbackResult = this.generateMockAIResponse(workflowText);
-            this.showFallbackMessage('AI APIキーが設定されていません。ローカル処理でワークフローを生成しました。');
+            MessageToast.warning('AI APIキーが設定されていません。ローカル処理でワークフローを生成しました。');
             return fallbackResult;
         }
+
+        // 既存のコードは削除（新しいモジュールに完全移行）
     }
 
     async callGeminiAPI(workflowText, customPrompt = null) {
@@ -925,13 +970,17 @@ class FocusLauncher {
     }
 
     async getBookmarks() {
-        try {
-            const result = await chrome.storage.local.get(['bookmarks']);
-            return result.bookmarks || [];
-        } catch (error) {
-            console.error('ブックマークの取得に失敗しました:', error);
-            return [];
-        }
+        // 新しいモジュールを使用（段階的移行）
+        return await StorageManager.getBookmarks();
+
+        // 既存のコードは残す（念のため）
+        // try {
+        //     const result = await chrome.storage.local.get(['bookmarks']);
+        //     return result.bookmarks || [];
+        // } catch (error) {
+        //     console.error('ブックマークの取得に失敗しました:', error);
+        //     return [];
+        // }
     }
 
     async getFavicon(url) {
@@ -964,20 +1013,33 @@ class FocusLauncher {
         return null;
     }
 
-    async endWorkflow() {
-        // 終了前のワークフロー情報を保存
-        const workflowInfo = this.currentWorkflow ? {
-            workflowText: this.currentWorkflow.text,
-            duration: (Date.now() - this.currentWorkflow.timestamp) / 60000 // 分単位
-        } : null;
-        
-        // ログを記録
-        await this.saveLog('workflow_ended', workflowInfo);
+    // 振り返り画面に遷移する関数
+    async showReflectionScreen() {
+        // 振り返り画面を新しいタブで開く
+        const reflectionUrl = chrome.runtime.getURL('views/reflection.html');
+        await chrome.tabs.create({ url: reflectionUrl });
+        await chrome.storage.local.set({ reflectionTime: Date.now() });
+        // 現在のタブを閉じる
+        const currentTab = await chrome.tabs.getCurrent();
+        if (currentTab) {
+            await chrome.tabs.remove(currentTab.id);
+        }
+    }
 
+    // ワークフローを終了する関数
+    async endWorkflow() {
+        // 新しいモジュールを使用（段階的移行）
+        await WorkflowManager.end();
+
+        // ローカル変数もクリア
         this.currentWorkflow = null;
-        await chrome.storage.local.remove(['currentWorkflow']);
+        this.visitedPages = [];
+
         this.showWorkflowInput();
-        console.log('ワークフローを終了しました');
+
+        // 既存のコードは削除（新しいモジュールに完全移行）
+        // await chrome.storage.local.remove(['currentWorkflow']);
+        // await chrome.storage.local.remove(['currentWorkflowVisitedPages']);
     }
 
     showWorkflowInput() {
@@ -1002,37 +1064,40 @@ class FocusLauncher {
     }
 
     showFallbackMessage(message) {
-        // フォールバックメッセージを一時的に表示
-        const fallbackDiv = document.createElement('div');
-        fallbackDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #FF9800;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 10000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            font-weight: 500;
-            max-width: 400px;
-            line-height: 1.4;
-        `;
-        fallbackDiv.innerHTML = `
-            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <span style="margin-right: 8px;">⚠️</span>
-                <strong>フォールバック処理</strong>
-            </div>
-            <div>${message}</div>
-        `;
-        document.body.appendChild(fallbackDiv);
-        
-        // 5秒後に自動削除
-        setTimeout(() => {
-            if (fallbackDiv.parentNode) {
-                fallbackDiv.parentNode.removeChild(fallbackDiv);
-            }
-        }, 5000);
+        // 新しいモジュールを使用（段階的移行）
+        MessageToast.warning(message);
+
+        // 既存のコードは残す（念のため）
+        // const fallbackDiv = document.createElement('div');
+        // fallbackDiv.style.cssText = `
+        //     position: fixed;
+        //     top: 20px;
+        //     right: 20px;
+        //     background: #FF9800;
+        //     color: white;
+        //     padding: 15px 20px;
+        //     border-radius: 8px;
+        //     z-index: 10000;
+        //     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        //     font-weight: 500;
+        //     max-width: 400px;
+        //     line-height: 1.4;
+        // `;
+        // fallbackDiv.innerHTML = `
+        //     <div style="display: flex; align-items: center; margin-bottom: 8px;">
+        //         <span style="margin-right: 8px;">⚠️</span>
+        //         <strong>フォールバック処理</strong>
+        //     </div>
+        //     <div>${message}</div>
+        // `;
+        // document.body.appendChild(fallbackDiv);
+        //
+        // // 5秒後に自動削除
+        // setTimeout(() => {
+        //     if (fallbackDiv.parentNode) {
+        //         fallbackDiv.parentNode.removeChild(fallbackDiv);
+        //     }
+        // }, 5000);
     }
 
     // 初回利用チェック
@@ -1102,10 +1167,10 @@ class FocusLauncher {
     showConsentScreen() {
         // 現在のコンテンツを隠す
         document.getElementById('app').style.display = 'none';
-        
+
         // 確認画面を表示
         const consentFrame = document.createElement('iframe');
-        consentFrame.src = chrome.runtime.getURL('consent-screen.html');
+        consentFrame.src = chrome.runtime.getURL('views/consent-screen.html');
         consentFrame.style.cssText = `
             position: fixed;
             top: 0;
@@ -1130,10 +1195,128 @@ class FocusLauncher {
             }
         });
     }
+
+    async checkOverlay() {
+        const result = await chrome.storage.local.get(['waitingForConfirmation']);
+        if (result.waitingForConfirmation) {
+            this.showOverlay();
+        }
+    }
+
+    showOverlay() {
+        const overlay = document.createElement('div');
+        overlay.id = 'confirmation-overlay';
+
+        const box = document.createElement('div');
+        box.className = 'overlay-box';
+
+        // タイトル
+        const title = document.createElement('h2');
+        title.className = 'overlay-title';
+        title.textContent = '利用目的の再確認';
+
+        // 説明文
+        const description = document.createElement('p');
+        description.className = 'overlay-description';
+        description.innerHTML = `
+            しばらく作業から離れていたようですね。<br>
+            あなたの現在の利用目的を入力してください。<br>
+            <strong>利用目的が変わった場合、前のワークフローは終了します。</strong>
+        `;
+
+        // 入力欄
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'overlay-input';
+        input.placeholder = 'ここに「今」の利用目的を入力してください';
+
+        // ボタン
+        const button = document.createElement('button');
+        button.className = 'overlay-button';
+        button.textContent = '確認';
+        button.disabled = true;
+
+        // 入力時のイベント
+        input.addEventListener('input', () => {
+            button.disabled = input.value.trim().length === 0;
+        });
+
+        // ボタンクリック時のイベント
+        button.addEventListener('click', async () => {
+            const userInput = input.value.trim();
+            if (!userInput) return;
+        
+
+            // 進行中表示に切り替え
+            button.textContent = "判定中...";
+            button.style.backgroundColor = "#aaa"; // グレーっぽくする
+            button.disabled = true;
+
+            // Gemini APIに送信（新しいモジュールを使用）
+            const isSamePurpose = await GeminiClient.checkPurposeSimilarity(this.currentWorkflow.text, userInput);
+        
+            // 意図再確認履歴に追加
+            const purposeCheck = {
+                text: userInput,
+                isSamePurpose: isSamePurpose,
+                timestamp: Date.now()
+            };
+
+            this.currentWorkflow.purposeChecks.push(purposeCheck);
+            await chrome.storage.local.set({ currentWorkflow: this.currentWorkflow });
+
+            if (isSamePurpose) {
+                console.log("[DEBUG] 利用目的は一致 → 継続");
+                button.textContent = "目的一致 ✅";
+                button.style.backgroundColor = "#28a745"; // 緑
+                button.disabled = false;
+                await chrome.storage.local.set({ waitingForConfirmation: false });
+
+                // 1秒後にタブを閉じる
+                setTimeout(() => {
+                    overlay.remove();
+                    chrome.tabs.getCurrent((tab) => {
+                        if (tab) {
+                            chrome.tabs.remove(tab.id);
+                        }
+                    });
+                }, 1000);
+            } else {
+                console.log("[DEBUG] 利用目的が変化 → ワークフロー終了");
+                button.textContent = "目的変更 🔄";
+                button.style.backgroundColor = "#ed9121"; // オレンジ
+                button.disabled = false;
+                await chrome.storage.local.set({ waitingForConfirmation: false });
+                setTimeout(() => {
+                    overlay.remove();
+                    this.showReflectionScreen();
+                }, 1000);
+            }
+        });
+
+        // Enterキーでの確認
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !button.disabled) {
+                button.click();
+            }
+        });
+
+        // 要素を組み立て
+        box.appendChild(title);
+        box.appendChild(description);
+        box.appendChild(input);
+        box.appendChild(button);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        // 入力欄にフォーカス
+        setTimeout(() => {
+            input.focus();
+        }, 100);
+    }
 }
 
 // アプリケーションの初期化
 document.addEventListener('DOMContentLoaded', () => {
     new FocusLauncher();
 }); 
-

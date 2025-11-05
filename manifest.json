@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Focus Launcher",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "研究用PCでの集中作業をサポートするブラウザ拡張機能",
   "permissions": [
     "storage",
     "tabs",
     "activeTab",
     "scripting",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "idle"
   ],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*"
@@ -19,13 +20,20 @@
   "web_accessible_resources": [
   {
     "resources": [
-      "popup.html", 
-      "popup.js", 
-      "popup.css", 
+      "views/popup.html",
+      "views/popup.js",
+      "views/popup.css",
       "config.js",
-      "consent-screen.html",
-      "consent-screen.css", 
-      "consent-screen.js"
+      "views/consent-screen.html",
+      "views/consent-screen.css",
+      "views/consent-screen.js",
+      "views/reflection.html",
+      "views/reflection.css",
+      "views/reflection.js",
+      "views/newtab.html",
+      "views/newtab.css",
+      "views/newtab.js",
+      "modules/**/*.js"
     ],
     "matches": ["<all_urls>"]
   }],
@@ -38,11 +46,10 @@
   },
 
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "views/popup.html",
     "default_title": "Focus Launcher"
   },
-  
   "chrome_url_overrides": {
-    "newtab": "newtab.html"
+    "newtab": "views/newtab.html"
   }
-} 
+}

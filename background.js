@@ -1,11 +1,15 @@
 // Focus Launcher - バックグラウンドスクリプト
+console.log("[DEBUG] background.js loaded");
+
 
 // 拡張機能のインストール時の処理
 chrome.runtime.onInstalled.addListener(() => { 
     // 初期設定
     chrome.storage.local.set({
         isFirstRun: true,
-        currentWorkflow: null
+        currentWorkflow: null,
+        reflectionTime: null,
+        waitingForConfirmation: false 
     });
 });
 
@@ -62,15 +66,10 @@ async function resetUserData() {
 
 // ログ保存関数
 async function saveLog(eventType, data) {
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      eventType: eventType,
-      data: data
-    };
-    
+        
     const result = await chrome.storage.local.get(['logs']);
     const logs = result.logs || [];
-    logs.push(logEntry);
+    logs.push(data);
     
     await chrome.storage.local.set({ logs: logs });
 }
@@ -125,12 +124,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // 非同期レスポンスを有効にする
         return true;
     }
-    
-    if (request.action === 'test') {
-        console.log('テストメッセージを受信しました');
-        sendResponse({ success: true });
-        return true;
-    }
 
     if (request.action === 'generateExperimentId') {
         const experimentId = generateExperimentId();
@@ -160,6 +153,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
+
     // ログの保存
     if (request.action === 'saveLog') {
         saveLog(request.eventType, request.data).then(() => {
@@ -171,56 +165,109 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
+    if (msg.action === "confirmationDone") {
+        chrome.storage.local.set({ waitingForConfirmation: false }, () => {
+            console.log("[DEBUG] 確認待ち状態を解除しました");
+        });
+        sendResponse({ success: true });
+    }
+
     // 未知のアクションに対する警告
     console.warn('未知のアクション:', request.action);
     sendResponse({ error: 'Unknown action' });
     return true;
 });
 
-// 定期的なクリーンアップ（24時間経過したワークフローを削除）
-setInterval(() => {
-    chrome.storage.local.get(['currentWorkflow'], (result) => {
-        if (result.currentWorkflow) {
-            const now = Date.now();
-            const workflowAge = now - result.currentWorkflow.timestamp;
-            const oneDay = 24 * 60 * 60 * 1000; // 24時間（ミリ秒）
-            
-            if (workflowAge > oneDay) {
-                chrome.storage.local.remove(['currentWorkflow'], () => {
-                    console.log('24時間経過したワークフローを削除しました');
+// ページ訪問追跡（background.jsで実行）
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete' && tab.url) {
+        // ワークフローが存在するかチェック
+        const result = await chrome.storage.local.get(['currentWorkflow', 'currentWorkflowVisitedPages']);
+        if (!result.currentWorkflow) return;
+
+        // 内部ページは除外
+        if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+            return;
+        }
+
+        const pageInfo = {
+            title: tab.title || '無題のページ',
+            url: tab.url,
+            timestamp: Date.now()
+        };
+
+        const visitedPages = result.currentWorkflowVisitedPages || [];
+
+        // 重複チェック（同じURLで最近アクセスした場合は除外）
+        const recentVisit = visitedPages.find(page =>
+            page.url === tab.url &&
+            (Date.now() - page.timestamp) < 3000 // 3秒以内
+        );
+
+        if (!recentVisit) {
+            visitedPages.push(pageInfo);
+            await chrome.storage.local.set({ currentWorkflowVisitedPages: visitedPages });
+            console.log('[PAGE TRACKING] ページを追跡しました:', pageInfo.title, pageInfo.url);
+        }
+    }
+});
+
+// 新しいタブで overlay を表示
+chrome.tabs.onCreated.addListener((tab) => {
+    chrome.storage.local.get(['waitingForConfirmation'], (result) => {
+        if (result.waitingForConfirmation) {
+            if (tab.url.startsWith("http") || tab.url.startsWith("https")) {
+                chrome.tabs.sendMessage(tab.id, { action: "showOverlay" }, (res) => {
+                    if (chrome.runtime.lastError) console.log("sendMessage失敗:", chrome.runtime.lastError.message);
                 });
             }
         }
     });
-}, 60 * 60 * 1000); // 1時間ごとにチェック
+});
 
-// タブの更新・切り替えを監視
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && tab.url) {
-        saveLog('tab_updated', {
-            title: tab.title,
-            url: tab.url
+// ==== idle監視用テストコード ====
+
+// 放置時間しきい値（秒単位）
+const IDLE_SECONDS = 3600; // 1時間放置で意図の再確認ポップアップ表示
+
+// idle API の監視を開始
+chrome.idle.setDetectionInterval(IDLE_SECONDS);
+console.log("[IDLE DEBUG] idle監視を開始（", IDLE_SECONDS, "秒）");
+
+
+// idleイベントリスナ
+chrome.idle.setDetectionInterval(IDLE_SECONDS);
+chrome.idle.onStateChanged.addListener((newState) => {
+    if (newState === "idle" || newState === "locked") {
+        chrome.storage.local.get(["currentWorkflow", "waitingForConfirmation"], (res) => {
+            if (res.currentWorkflow?.text && !res.waitingForConfirmation) {
+                console.log("[IDLE DEBUG] 放置検知 → 確認待ち状態へ");
+                chrome.storage.local.set({ waitingForConfirmation: true }, () => {
+                    openOverlayTab();
+                });
+            }
         });
     }
 });
 
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-    try {
-        // アクティブになったタブの詳細情報を取得
-        const tab = await chrome.tabs.get(activeInfo.tabId);
-        saveLog('tab_switched', {
-            title: tab.title,
-            url: tab.url
-        });
-    } catch (error) {
-        console.error('タブ情報の取得に失敗:', error);
-    }
-});
+// 新しいタブを開き overlay を実行
+function openOverlayTab() {
+    chrome.tabs.create({ url: "views/newtab.html" }, (tab) => {
+        console.log("[DEBUG] 新しいタブを開きました", tab.id);
 
-chrome.tabs.onCreated.addListener((tab) => {
-    saveLog('new_tab_opened', {
-        tabId: tab.id,
-        url: tab.url,
-        windowId: tab.windowId
+        // タブの読み込み完了を待つ
+        const listener = (tabId, changeInfo) => {
+            if (tabId === tab.id && changeInfo.status === "complete") {
+                chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    files: ["overlayContent.js"]
+                }, () => {
+                    if (chrome.runtime.lastError)
+                        console.log("executeScript失敗:", chrome.runtime.lastError.message);
+                });
+                chrome.tabs.onUpdated.removeListener(listener);
+            }
+        };
+        chrome.tabs.onUpdated.addListener(listener);
     });
-});
+}
