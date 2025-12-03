@@ -1,6 +1,5 @@
 // Focus Launcher - メインロジック
 
-// 新しいモジュールをインポート（段階的移行）
 import { MessageToast } from '../modules/pages/message-toast.js';
 import { UrlValidator } from '../modules/utils/url-validator.js';
 import { StorageManager } from '../modules/core/storage-manager.js';
@@ -8,9 +7,10 @@ import { WorkflowManager } from '../modules/core/workflow-manager.js';
 import { Logger } from '../modules/core/logger.js';
 import { GeminiClient } from '../modules/ai/gemini-client.js';
 import { PromptBuilder } from '../modules/ai/prompt-builder.js';
-import { PageTracker } from '../modules/features/page-tracker.js';
+import { MockResponseGenerator } from '../modules/ai/mock-response-generator.js';
 import { FeedbackProcessor } from '../modules/features/feedback-processor.js';
 import { IdleOverlay } from '../modules/features/idle-overlay.js';
+import { FirstTimeChecker } from '../modules/features/first-time-checker.js';
 import { HomeScreen } from '../modules/pages/home-screen.js';
 import { WorkflowScreen } from '../modules/pages/workflow-screen.js';
 
@@ -18,8 +18,7 @@ class FocusLauncher {
     constructor() {
         this.currentWorkflow = null;
         this.isRefreshing = false;
-        this.visitedPages = []; // ワークフロー中にアクセスしたページを追跡
-        this.pageTracker = new PageTracker();  // ページトラッカー
+        this.visitedPages = []; // ワークフロー中にアクセスしたページを追跡（background.jsで管理）
         this.idleOverlay = new IdleOverlay();  // アイドルオーバーレイ
         this.init();
         this.setupMessageListener();
@@ -27,27 +26,19 @@ class FocusLauncher {
 
     async init() {
         this.bindEvents();
-        this.checkFirstTimeUser();
-        // ページトラッキングは両方で実行（background.jsとnewtab.jsの両方）
-        this.setupPageTracking();
-        await this.restoreVisitedPages();
-        await this.checkOverlay();
-    }
 
-    // ページリロード時にvisitedPagesを復元
-    async restoreVisitedPages() {
-        // 新しいモジュールを使用（段階的移行）
-        this.visitedPages = await StorageManager.getVisitedPages();
-
-        // 既存のコードは残す（念のため）
-        // try {
-        //     const result = await chrome.storage.local.get(['currentWorkflowVisitedPages']);
-        //     if (result.currentWorkflowVisitedPages) {
-        //         this.visitedPages = result.currentWorkflowVisitedPages;
-        //     }
-        // } catch (error) {
-        //     console.error('visitedPagesの復元に失敗しました:', error);
-        // }
+        // 初回利用チェック
+        await FirstTimeChecker.check(
+            () => {
+                // 初回利用時：同意画面を表示
+                FirstTimeChecker.showConsentScreen();
+            },
+            async () => {
+                // 既存ユーザー：ワークフローを読み込み
+                await this.loadCurrentWorkflow();
+                await this.checkOverlay();
+            }
+        );
     }
 
     bindEvents() {
@@ -106,88 +97,7 @@ class FocusLauncher {
         });
     }
 
-    // ページ遷移の追跡を設定
-    setupPageTracking() {
-        try {
-            // タブの更新を監視
-            chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-                if (changeInfo.status === 'complete' && tab.url && this.currentWorkflow) {
-                    this.trackPageVisit(tab);
-                }
-            });
-
-            // タブの切り替えを監視
-            chrome.tabs.onActivated.addListener((activeInfo) => {
-                chrome.tabs.get(activeInfo.tabId, (tab) => {
-                    if (tab && tab.url && this.currentWorkflow) {
-                        this.trackPageVisit(tab);
-                    }
-                });
-            });
-            console.log('[PAGE TRACKING] newtab.jsでページトラッキングを開始しました');
-        } catch (error) {
-            console.error('[PAGE TRACKING] newtab.jsでのページトラッキング設定に失敗:', error);
-        }
-    }
-
-    // ページ訪問を追跡
-    async trackPageVisit(tab) {
-        if (!this.currentWorkflow || !tab.url) return;
-
-        // 内部ページを除外（新しいモジュールを使用）
-        if (!UrlValidator.isTrackable(tab.url)) {
-            return;
-        }
-
-        // 既存のコードは残す（念のため）
-        // if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
-        //     return;
-        // }
-
-        const pageInfo = {
-            title: tab.title || '無題のページ',
-            url: tab.url,
-            timestamp: Date.now()
-        };
-
-        // 重複チェック（同じURLで最近アクセスした場合は除外）
-        const recentVisit = this.visitedPages.find(page => 
-            page.url === tab.url && 
-            (Date.now() - page.timestamp) < 3000 // 3秒以内
-        );
-
-        if (!recentVisit) {
-            this.visitedPages.push(pageInfo);
-
-            // localStorageに保存
-            await this.saveVisitedPagesToStorage();
-        }
-    }
-
-    async saveVisitedPagesToStorage() {
-        try {
-            await chrome.storage.local.set({ 
-                currentWorkflowVisitedPages: this.visitedPages 
-            });
-        } catch (error) {
-            console.error('visitedPagesの保存に失敗しました:', error);
-        }
-    }
-
-    async saveLog(eventType, data) {
-        try {
-            await chrome.runtime.sendMessage({
-                action: 'saveLog',
-                eventType: eventType,
-                data: data
-            });
-        } catch (error) {
-            console.error('ログ保存に失敗しました:', error);
-        }
-    }
-
     async loadCurrentWorkflow() {
-        // 新しいモジュールを使用（段階的移行）
         const currentWorkflow = await StorageManager.getCurrentWorkflow();
         console.log('ストレージから取得したデータ:', currentWorkflow);
 
@@ -203,28 +113,6 @@ class FocusLauncher {
             this.showWorkflowInput();
             console.log('新しいワークフローを開始します');
         }
-
-        // 既存のコードは残す（念のため）
-        // try {
-        //     const result = await chrome.storage.local.get(['currentWorkflow']);
-        //     console.log('ストレージから取得したデータ:', result);
-        //
-        //     if (result.currentWorkflow && result.currentWorkflow.text) {
-        //         this.currentWorkflow = result.currentWorkflow;
-        //
-        //         // ワークフローが存在する場合は、直接ホーム画面を表示
-        //         this.showHomeScreen();
-        //         this.updateHomeScreen();
-        //
-        //         console.log('既存のワークフローを復元しました:', this.currentWorkflow.text);
-        //     } else {
-        //         this.showWorkflowInput();
-        //         console.log('新しいワークフローを開始します');
-        //     }
-        // } catch (error) {
-        //     console.error('ワークフローの読み込みに失敗しました:', error);
-        //     this.showWorkflowInput();
-        // }
     }
 
     async startWorkflow() {
@@ -251,7 +139,8 @@ class FocusLauncher {
     
         // ストレージに保存
         await chrome.storage.local.set({ currentWorkflow: this.currentWorkflow });
-    
+        console.log('[DEBUG] ワークフローを保存しました:', this.currentWorkflow);
+
         this.showLoadingScreen();
 
         try {
@@ -334,364 +223,31 @@ class FocusLauncher {
     }
 
     async processFeedbackWithAI(feedbackText) {
-        // 新しいモジュールを使用（段階的移行）
         const prompt = PromptBuilder.buildFeedbackPrompt(this.currentWorkflow, feedbackText);
-
-        // 既存のコードは削除（新しいモジュールに完全移行）
-        // const currentActions = this.currentWorkflow.aiContent.actions;
-        // const currentTitle = this.currentWorkflow.aiContent.title;
-        // const currentContent = this.currentWorkflow.aiContent.content;
-        //
-        // const prompt = `
-        // 現在のワークフロー情報：
-        // - タイトル: ${currentTitle}
-        // - 内容: ${currentContent}
-        // - 現在のツール: ${currentActions.map(a => a.title).join(', ')}
-        //
-        // ユーザーからの修正要求: ${feedbackText}
-
 
         // APIキーが設定されている場合はGemini APIを使用
         if (GeminiClient.hasApiKey()) {
             try {
                 const result = await GeminiClient.processFeedback(prompt);
                 console.log('Gemini APIで修正要求処理成功');
-                // AI処理が成功した場合のみ成功メッセージを表示
                 MessageToast.success('修正要求が正常に処理されました！');
                 return result;
             } catch (error) {
                 console.error('Gemini API呼び出しに失敗しました:', error);
                 // APIが失敗した場合はフォールバック
-                const fallbackResult = this.processFeedbackRequest(feedbackText);
+                const fallbackResult = FeedbackProcessor.processFeedback(feedbackText, this.currentWorkflow.aiContent);
                 MessageToast.warning('AI APIに接続できませんでした。ローカル処理で修正要求を処理しました。');
                 return fallbackResult;
             }
         } else {
             // APIキーが設定されていない場合はフォールバック
-            const fallbackResult = this.processFeedbackRequest(feedbackText);
+            const fallbackResult = FeedbackProcessor.processFeedback(feedbackText, this.currentWorkflow.aiContent);
             MessageToast.warning('AI APIキーが設定されていません。ローカル処理で修正要求を処理しました。');
             return fallbackResult;
         }
     }
 
-    async callGeminiAPIForFeedback(prompt) {
-        const requestBody = {
-            contents: [{
-                parts: [{
-                    text: prompt
-                }]
-            }],
-            generationConfig: {
-                temperature: 0.7,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 1024,
-            }
-        };
-
-        console.log('Gemini APIに修正要求を送信中...');
-
-        const response = await fetch(`${CONFIG.GEMINI_API_URL}?key=${CONFIG.GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody)
-        });
-
-        if (!response.ok) {
-            throw new Error(`API呼び出しに失敗しました: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-            throw new Error('APIレスポンスが無効です');
-        }
-
-        const aiText = data.candidates[0].content.parts[0].text;
-        console.log('AIからの応答:', aiText);
-        
-        // JSONレスポンスを解析（マークダウンのコードブロック記号を除去）
-        try {
-            // マークダウンのコードブロック記号を除去
-            let cleanText = aiText.trim();
-            
-            // ```json と ``` を除去
-            if (cleanText.startsWith('```json')) {
-                cleanText = cleanText.substring(7);
-            } else if (cleanText.startsWith('```')) {
-                cleanText = cleanText.substring(3);
-            }
-            
-            if (cleanText.endsWith('```')) {
-                cleanText = cleanText.substring(0, cleanText.length - 3);
-            }
-            
-            cleanText = cleanText.trim();
-            
-            const aiResponse = JSON.parse(cleanText);
-            
-            // レスポンスの検証
-            if (!aiResponse.title || !aiResponse.content || !aiResponse.actions) {
-                throw new Error('APIレスポンスの形式が無効です');
-            }
-
-            console.log('AI応答の解析成功:', aiResponse);
-            return aiResponse;
-        } catch (parseError) {
-            console.error('JSON解析に失敗しました:', parseError);
-            console.log('AIレスポンス:', aiText);
-            throw new Error('AIレスポンスの解析に失敗しました');
-        }
-    }
-
-    // フォールバック用のローカル処理（既存のメソッドを修正）
-    processFeedbackRequest(feedbackText) {
-        // 既存のアクションを取得
-        const existingActions = this.currentWorkflow.aiContent.actions;
-        console.log('既存のアクション:', existingActions);
-        
-        // 削除要求をチェック
-        const removeRequests = this.extractRemoveRequests(feedbackText);
-        console.log('削除要求:', removeRequests);
-        
-        let filteredActions = existingActions.filter(action => 
-            !removeRequests.some(remove => 
-                action.title.toLowerCase().includes(remove.toLowerCase()) ||
-                action.description.toLowerCase().includes(remove.toLowerCase())
-            )
-        );
-
-        console.log('削除後のアクション:', filteredActions);
-
-        // 追加要求を処理
-        const addRequests = this.extractAddRequests(feedbackText);
-        console.log('追加要求:', addRequests);
-        
-        if (addRequests.length > 0) {
-            const newActions = this.generateAdditionalActions(addRequests);
-            console.log('新しく追加されるアクション:', newActions);
-            filteredActions = [...filteredActions, ...newActions];
-        }
-
-        // 重複を除去
-        const uniqueActions = [];
-        const seenTitles = new Set();
-        
-        for (const action of filteredActions) {
-            if (!seenTitles.has(action.title)) {
-                seenTitles.add(action.title);
-                uniqueActions.push(action);
-            }
-        }
-
-        console.log('重複除去後のアクション:', uniqueActions);
-        
-        // 既存のAIコンテンツを保持しつつ、アクションのみ更新
-        return {
-            title: this.currentWorkflow.aiContent.title,
-            content: this.currentWorkflow.aiContent.content,
-            actions: uniqueActions
-        };
-    }
-
-    showSuccessMessage(message) {
-        // 新しいモジュールを使用（段階的移行）
-        MessageToast.success(message);
-
-        // 既存のコードは残す（念のため）
-        // const successDiv = document.createElement('div');
-        // successDiv.style.cssText = `
-        //     position: fixed;
-        //     top: 20px;
-        //     right: 20px;
-        //     background: #4CAF50;
-        //     color: white;
-        //     padding: 15px 20px;
-        //     border-radius: 8px;
-        //     z-index: 10000;
-        //     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        //     font-weight: 500;
-        // `;
-        // successDiv.textContent = message;
-        // document.body.appendChild(successDiv);
-        //
-        // // 3秒後に自動削除
-        // setTimeout(() => {
-        //     if (successDiv.parentNode) {
-        //         successDiv.parentNode.removeChild(successDiv);
-        //     }
-        // }, 3000);
-    }
-
-    extractRemoveRequests(feedbackText) {
-        const removeKeywords = ['削除', '削って', '取り除いて', '不要', 'いらない', '消して', '削る', '除去'];
-        const words = feedbackText.split(/[、。\s]+/);
-        const removeRequests = [];
-        
-        for (const word of words) {
-            if (removeKeywords.some(keyword => word.includes(keyword))) {
-                // 削除キーワードの前後の単語も含める
-                const wordIndex = words.indexOf(word);
-                if (wordIndex > 0) {
-                    removeRequests.push(words[wordIndex - 1]);
-                }
-                if (wordIndex < words.length - 1) {
-                    removeRequests.push(words[wordIndex + 1]);
-                }
-                removeRequests.push(word);
-            }
-        }
-        
-        return removeRequests.filter((word, index, arr) => arr.indexOf(word) === index);
-    }
-
-    extractAddRequests(feedbackText) {
-        const addKeywords = ['追加', '加えて', '入れて', '含めて', '増やして', '追加して', '入れる', '加える'];
-        const words = feedbackText.split(/[、。\s]+/);
-        const addRequests = [];
-        
-        for (const word of words) {
-            if (addKeywords.some(keyword => word.includes(keyword))) {
-                // 追加キーワードの前後の単語も含める
-                const wordIndex = words.indexOf(word);
-                if (wordIndex > 0) {
-                    addRequests.push(words[wordIndex - 1]);
-                }
-                if (wordIndex < words.length - 1) {
-                    addRequests.push(words[wordIndex + 1]);
-                }
-                addRequests.push(word);
-            }
-        }
-        
-        return addRequests.filter((word, index, arr) => arr.indexOf(word) === index);
-    }
-
-    generateAdditionalActions(requests) {
-        // 簡単なキーワードマッチングで追加アクションを生成
-        const additionalActions = [];
-        
-        for (const request of requests) {
-            console.log('追加要求を処理中:', request);
-            
-            if (request.includes('Google') || request.includes('グーグル')) {
-                if (request.includes('Docs') || request.includes('ドキュメント') || request.includes('文書')) {
-                    additionalActions.push({
-                        title: 'Google Docs',
-                        description: '文書作成',
-                        url: 'https://docs.google.com',
-                        icon: '📄'
-                    });
-                } else if (request.includes('Slides') || request.includes('プレゼン') || request.includes('スライド')) {
-                    additionalActions.push({
-                        title: 'Google Slides',
-                        description: 'プレゼンテーション',
-                        url: 'https://slides.google.com',
-                        icon: '📊'
-                    });
-                } else if (request.includes('Sheets') || request.includes('スプレッド') || request.includes('表計算')) {
-                    additionalActions.push({
-                        title: 'Google Sheets',
-                        description: 'スプレッドシート',
-                        url: 'https://sheets.google.com',
-                        icon: '📈'
-                    });
-                } else if (request.includes('Drive') || request.includes('ドライブ') || request.includes('ファイル')) {
-                    additionalActions.push({
-                        title: 'Google Drive',
-                        description: 'ファイル管理',
-                        url: 'https://drive.google.com',
-                        icon: '📁'
-                    });
-                }
-            } else if (request.includes('GitHub') || request.includes('github')) {
-                additionalActions.push({
-                    title: 'GitHub',
-                    description: 'コード管理・共有',
-                    url: 'https://github.com',
-                    icon: '💻'
-                });
-            } else if (request.includes('YouTube') || request.includes('youtube')) {
-                additionalActions.push({
-                    title: 'YouTube',
-                    description: '動画学習・検索',
-                    url: 'https://www.youtube.com',
-                    icon: '📺'
-                });
-            } else if (request.includes('ChatGPT') || request.includes('chatgpt')) {
-                additionalActions.push({
-                    title: 'ChatGPT',
-                    description: 'AIアシスタント',
-                    url: 'https://chat.openai.com',
-                    icon: '🤖'
-                });
-            } else if (request.includes('Notion') || request.includes('notion')) {
-                additionalActions.push({
-                    title: 'Notion',
-                    description: 'ノート・プロジェクト管理',
-                    url: 'https://www.notion.so',
-                    icon: '📝'
-                });
-            } else if (request.includes('Slack') || request.includes('slack')) {
-                additionalActions.push({
-                    title: 'Slack',
-                    description: 'チームコミュニケーション',
-                    url: 'https://slack.com',
-                    icon: '💬'
-                });
-            } else if (request.includes('Zoom') || request.includes('zoom')) {
-                additionalActions.push({
-                    title: 'Zoom',
-                    description: 'オンライン会議',
-                    url: 'https://zoom.us',
-                    icon: '📹'
-                });
-            } else if (request.includes('Trello') || request.includes('trello')) {
-                additionalActions.push({
-                    title: 'Trello',
-                    description: 'タスク管理',
-                    url: 'https://trello.com',
-                    icon: '📋'
-                });
-            } else if (request.includes('Discord') || request.includes('discord')) {
-                additionalActions.push({
-                    title: 'Discord',
-                    description: 'コミュニケーション',
-                    url: 'https://discord.com',
-                    icon: '🎮'
-                });
-            } else if (request.includes('Twitter') || request.includes('twitter') || request.includes('X')) {
-                additionalActions.push({
-                    title: 'Twitter',
-                    description: 'ソーシャルメディア',
-                    url: 'https://twitter.com',
-                    icon: '🐦'
-                });
-            } else if (request.includes('LinkedIn') || request.includes('linkedin')) {
-                additionalActions.push({
-                    title: 'LinkedIn',
-                    description: 'ビジネスネットワーキング',
-                    url: 'https://linkedin.com',
-                    icon: '💼'
-                });
-            } else if (request.includes('PaperDive') || request.includes('paperdive') || request.includes('論文') || request.includes('研究')) {
-                additionalActions.push({
-                    title: 'PaperDive',
-                    description: '論文検索・分析',
-                    url: 'https://www.paperdive.app',
-                    icon: '🔬'
-                });
-            }
-        }
-        
-        console.log('生成された追加アクション:', additionalActions);
-        return additionalActions;
-    }
-
     async generateHomeScreen(workflowText) {
-        // 新しいモジュールを使用（段階的移行）
         const bookmarks = await this.getBookmarks();
         const prompt = PromptBuilder.buildHomeScreenPrompt(workflowText, bookmarks);
 
@@ -704,255 +260,25 @@ class FocusLauncher {
             } catch (error) {
                 console.error('Gemini API呼び出しに失敗しました:', error);
                 // APIが失敗した場合はフォールバック
-                const fallbackResult = this.generateMockAIResponse(workflowText);
+                const fallbackResult = MockResponseGenerator.generate(workflowText);
                 MessageToast.warning('AI APIに接続できませんでした。ローカル処理でワークフローを生成しました。');
                 return fallbackResult;
             }
         } else {
             // APIキーが設定されていない場合はモックデータを使用
-            const fallbackResult = this.generateMockAIResponse(workflowText);
+            const fallbackResult = MockResponseGenerator.generate(workflowText);
             MessageToast.warning('AI APIキーが設定されていません。ローカル処理でワークフローを生成しました。');
             return fallbackResult;
         }
-
-        // 既存のコードは削除（新しいモジュールに完全移行）
     }
 
-    async callGeminiAPI(workflowText, customPrompt = null) {
-        const prompt = customPrompt || CONFIG.PROMPT_TEMPLATE.replace('{workflow}', workflowText);
-        
-        const requestBody = {
-            contents: [{
-                parts: [{
-                    text: prompt
-                }]
-            }],
-            generationConfig: {
-                temperature: 0.7,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 1024,
-            }
-        };
-
-        const response = await fetch(`${CONFIG.GEMINI_API_URL}?key=${CONFIG.GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody)
-        });
-
-        if (!response.ok) {
-            throw new Error(`API呼び出しに失敗しました: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-            throw new Error('APIレスポンスが無効です');
-        }
-
-        const aiText = data.candidates[0].content.parts[0].text;
-        
-        // JSONレスポンスを解析（マークダウンのコードブロック記号を除去）
-        try {
-            // マークダウンのコードブロック記号を除去
-            let cleanText = aiText.trim();
-            
-            // ```json と ``` を除去
-            if (cleanText.startsWith('```json')) {
-                cleanText = cleanText.substring(7);
-            } else if (cleanText.startsWith('```')) {
-                cleanText = cleanText.substring(3);
-            }
-            
-            if (cleanText.endsWith('```')) {
-                cleanText = cleanText.substring(0, cleanText.length - 3);
-            }
-            
-            cleanText = cleanText.trim();
-            
-            const aiResponse = JSON.parse(cleanText);
-            
-            // レスポンスの検証
-            if (!aiResponse.title || !aiResponse.content || !aiResponse.actions) {
-                throw new Error('APIレスポンスの形式が無効です');
-            }
-
-            // 初期生成時のみ5つに制限（厳格ではない）
-            if (aiResponse.actions.length > 5) {
-                console.log(`アクション数が5つを超えていますが、必要なため保持します: ${aiResponse.actions.length}個`);
-            }
-
-            return aiResponse;
-        } catch (parseError) {
-            console.error('JSON解析に失敗しました:', parseError);
-            console.log('AIレスポンス:', aiText);
-            throw new Error('AIレスポンスの解析に失敗しました');
-        }
-    }
-
-    generateMockAIResponse(workflowText) {
-        // ワークフローの内容に基づいてモックレスポンスを生成
-        const responses = {
-            '研究': {
-                title: '研究作業のサポート',
-                content: `
-                    <h3>研究計画書の作成をサポートします</h3>
-                    <p>以下のステップで効率的に進めましょう：</p>
-                    <ul>
-                        <li>関連文献の調査と整理</li>
-                        <li>研究手法の検討</li>
-                        <li>データ収集計画の策定</li>
-                        <li>分析手法の決定</li>
-                    </ul>
-                `,
-                actions: CONFIG.DEFAULT_ACTIONS.研究
-            },
-            '出張': {
-                title: '出張準備のサポート',
-                content: `
-                    <h3>出張の準備を効率的に進めましょう</h3>
-                    <p>必要な手配を順番に行います：</p>
-                    <ul>
-                        <li>航空券の予約</li>
-                        <li>ホテルの予約</li>
-                        <li>交通手段の確認</li>
-                        <li>必要書類の準備</li>
-                    </ul>
-                `,
-                actions: CONFIG.DEFAULT_ACTIONS.出張
-            },
-            'プログラミング': {
-                title: 'プログラミング学習・開発サポート',
-                content: `
-                    <h3>プログラミング学習と開発を効率化します</h3>
-                    <p>以下のステップで進めましょう：</p>
-                    <ul>
-                        <li>学習計画の策定</li>
-                        <li>コードの実践・実験</li>
-                        <li>プロジェクトの管理</li>
-                        <li>コミュニティでの共有</li>
-                    </ul>
-                `,
-                actions: CONFIG.DEFAULT_ACTIONS.プログラミング
-            },
-            '学習': {
-                title: '学習・スキルアップサポート',
-                content: `
-                    <h3>効率的な学習をサポートします</h3>
-                    <p>以下の方法で学習を進めましょう：</p>
-                    <ul>
-                        <li>オンライン講座の受講</li>
-                        <li>動画での学習</li>
-                        <li>ノートの整理・復習</li>
-                        <li>実践的な演習</li>
-                    </ul>
-                `,
-                actions: CONFIG.DEFAULT_ACTIONS.学習
-            },
-            'ビジネス': {
-                title: 'ビジネス活動サポート',
-                content: `
-                    <h3>ビジネス活動を効率化します</h3>
-                    <p>以下のツールを活用しましょう：</p>
-                    <ul>
-                        <li>ネットワーキング</li>
-                        <li>チームコミュニケーション</li>
-                        <li>プロジェクト管理</li>
-                        <li>オンライン会議</li>
-                    </ul>
-                `,
-                actions: CONFIG.DEFAULT_ACTIONS.ビジネス
-            },
-            'default': {
-                title: '作業のサポート',
-                content: `
-                    <h3>効率的な作業をサポートします</h3>
-                    <p>目的に応じたツールをご提案します。</p>
-                `,
-                actions: CONFIG.DEFAULT_ACTIONS.default
-            }
-        };
-
-        // ワークフローの内容に基づいて適切なレスポンスを選択
-        let response = responses.default;
-        
-        if (workflowText.includes('研究') || workflowText.includes('論文') || workflowText.includes('文献')) {
-            response = responses.研究;
-        } else if (workflowText.includes('出張') || workflowText.includes('旅行') || workflowText.includes('航空券')) {
-            response = responses.出張;
-        } else if (workflowText.includes('プログラミング') || workflowText.includes('コーディング') || workflowText.includes('開発') || workflowText.includes('GitHub')) {
-            response = responses.プログラミング;
-        } else if (workflowText.includes('学習') || workflowText.includes('勉強') || workflowText.includes('講座') || workflowText.includes('スキル')) {
-            response = responses.学習;
-        } else if (workflowText.includes('ビジネス') || workflowText.includes('仕事') || workflowText.includes('会議') || workflowText.includes('プロジェクト')) {
-            response = responses.ビジネス;
-        }
-
-        return response;
-    }
-
-    updateHomeScreen() {
+    async updateHomeScreen() {
         if (!this.currentWorkflow) return;
-
-        // タイトルを更新
-        document.getElementById('current-workflow-title').textContent = this.currentWorkflow.aiContent.title;
-
-        // AI生成コンテンツを更新
-        const aiContent = document.getElementById('ai-generated-content');
-        aiContent.innerHTML = this.currentWorkflow.aiContent.content;
-
-        // クイックアクションを更新
-        this.updateQuickActions(this.currentWorkflow.aiContent.actions);
+        await HomeScreen.update(this.currentWorkflow, (index) => this.removeAction(index));
     }
 
-    async updateQuickActions(actions) {
-        const actionsGrid = document.getElementById('quick-actions-grid');
-        actionsGrid.innerHTML = '';
-
-        for (let i = 0; i < actions.length; i++) {
-            const action = actions[i];
-            const actionCard = document.createElement('div'); // aタグからdivタグに変更
-            actionCard.className = 'action-card';
-            
-            // ファビコンを取得
-            const faviconUrl = await this.getFavicon(action.url);
-            
-            actionCard.innerHTML = `
-                <button class="remove-button" data-index="${i}" title="このアプリを削除">✕</button>
-                <div class="action-icon">
-                    ${faviconUrl ? `<img src="${faviconUrl}" alt="${action.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width: 24px; height: 24px; border-radius: 4px;">` : ''}
-                    <span style="display: ${faviconUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; width: 100%; height: 100%;">${action.icon}</span>
-                </div>
-                <div class="action-title">${action.title}</div>
-                <div class="action-description">${action.description}</div>
-            `;
-
-            // 削除ボタンのイベントリスナーを追加
-            const removeButton = actionCard.querySelector('.remove-button');
-            removeButton.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.removeAction(i);
-            });
-
-            // カード全体のクリックイベント（リンクとして機能）
-            actionCard.addEventListener('click', (e) => {
-                // 削除ボタンがクリックされた場合はリンクを開かない
-                if (e.target.classList.contains('remove-button')) {
-                    return;
-                }
-                window.open(action.url, '_blank');
-            });
-
-            actionsGrid.appendChild(actionCard);
-        }
-    }
-
-    // アプリを削除するメソッド
-    removeAction(index) {
+    // アクション削除
+    async removeAction(index) {
         if (!this.currentWorkflow || !this.currentWorkflow.aiContent || !this.currentWorkflow.aiContent.actions) {
             return;
         }
@@ -961,56 +287,16 @@ class FocusLauncher {
         const removedAction = this.currentWorkflow.aiContent.actions.splice(index, 1)[0];
 
         // ストレージに保存
-        chrome.storage.local.set({ currentWorkflow: this.currentWorkflow });
+        await WorkflowManager.update(this.currentWorkflow);
 
         // ホーム画面を更新
-        this.updateHomeScreen();
+        await this.updateHomeScreen();
 
         console.log(`アクション「${removedAction.title}」を削除しました`);
     }
 
     async getBookmarks() {
-        // 新しいモジュールを使用（段階的移行）
         return await StorageManager.getBookmarks();
-
-        // 既存のコードは残す（念のため）
-        // try {
-        //     const result = await chrome.storage.local.get(['bookmarks']);
-        //     return result.bookmarks || [];
-        // } catch (error) {
-        //     console.error('ブックマークの取得に失敗しました:', error);
-        //     return [];
-        // }
-    }
-
-    async getFavicon(url) {
-        try {
-            const domain = new URL(url).hostname;
-            // Google Workspaceのツール用の特別処理
-            if (domain === 'docs.google.com') {
-                return 'https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico';
-            } else if (domain === 'slides.google.com') {
-                return 'https://ssl.gstatic.com/docs/presentations/images/favicon-2023q4.ico';
-            } else if (domain === 'sheets.google.com') {
-                return 'https://ssl.gstatic.com/docs/spreadsheets/spreadsheets_2023q4.ico';
-            } else if (domain === 'drive.google.com') {
-                return 'https://ssl.gstatic.com/docs/doclist/images/drive_2022q3_32dp.png';
-            } else if (domain === 'mail.google.com') {
-                return 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Gmail_icon_%282020%29.svg';
-            }
-            
-            // その他のサイトは通常のGoogleファビコンAPIを使用
-            const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-            
-            // ファビコンが存在するかチェック
-            const response = await fetch(faviconUrl, { method: 'HEAD' });
-            if (response.ok) {
-                return faviconUrl;
-            }
-        } catch (error) {
-            console.log('ファビコン取得に失敗:', url, error);
-        }
-        return null;
     }
 
     // 振り返り画面に遷移する関数
@@ -1028,159 +314,30 @@ class FocusLauncher {
 
     // ワークフローを終了する関数
     async endWorkflow() {
-        // 新しいモジュールを使用（段階的移行）
         await WorkflowManager.end();
-
-        // ローカル変数もクリア
         this.currentWorkflow = null;
         this.visitedPages = [];
-
-        this.showWorkflowInput();
-
-        // 既存のコードは削除（新しいモジュールに完全移行）
-        // await chrome.storage.local.remove(['currentWorkflow']);
-        // await chrome.storage.local.remove(['currentWorkflowVisitedPages']);
+        WorkflowScreen.showWorkflowInput();
     }
 
     showWorkflowInput() {
-        document.getElementById('workflow-input').classList.remove('hidden');
-        document.getElementById('home-screen').classList.add('hidden');
-        document.getElementById('loading-screen').classList.add('hidden');
-        
-        // テキストエリアをクリア
-        document.getElementById('workflow-textarea').value = '';
+        WorkflowScreen.showWorkflowInput();
     }
 
     showHomeScreen() {
-        document.getElementById('workflow-input').classList.add('hidden');
-        document.getElementById('home-screen').classList.remove('hidden');
-        document.getElementById('loading-screen').classList.add('hidden');
+        WorkflowScreen.showHomeScreen();
     }
 
     showLoadingScreen() {
-        document.getElementById('workflow-input').classList.add('hidden');
-        document.getElementById('home-screen').classList.add('hidden');
-        document.getElementById('loading-screen').classList.remove('hidden');
+        WorkflowScreen.showLoadingScreen();
     }
 
     showFallbackMessage(message) {
-        // 新しいモジュールを使用（段階的移行）
         MessageToast.warning(message);
-
-        // 既存のコードは残す（念のため）
-        // const fallbackDiv = document.createElement('div');
-        // fallbackDiv.style.cssText = `
-        //     position: fixed;
-        //     top: 20px;
-        //     right: 20px;
-        //     background: #FF9800;
-        //     color: white;
-        //     padding: 15px 20px;
-        //     border-radius: 8px;
-        //     z-index: 10000;
-        //     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        //     font-weight: 500;
-        //     max-width: 400px;
-        //     line-height: 1.4;
-        // `;
-        // fallbackDiv.innerHTML = `
-        //     <div style="display: flex; align-items: center; margin-bottom: 8px;">
-        //         <span style="margin-right: 8px;">⚠️</span>
-        //         <strong>フォールバック処理</strong>
-        //     </div>
-        //     <div>${message}</div>
-        // `;
-        // document.body.appendChild(fallbackDiv);
-        //
-        // // 5秒後に自動削除
-        // setTimeout(() => {
-        //     if (fallbackDiv.parentNode) {
-        //         fallbackDiv.parentNode.removeChild(fallbackDiv);
-        //     }
-        // }, 5000);
     }
 
-    // 初回利用チェック
-    async checkFirstTimeUser() {
-        try {
-            console.log('初回利用チェックを開始...');
-            
-            // Runtime の接続確認
-            if (!chrome.runtime) {
-                console.error('chrome.runtime が利用できません');
-                this.loadCurrentWorkflow();
-                return;
-            }
-        
-            const response = await chrome.runtime.sendMessage({
-                action: 'checkFirstTimeUser'
-            });
-            
-            // レスポンスが undefined または null の場合の処理
-            if (!response || typeof response !== 'object') {
-                console.error('Background script からの応答が無効です:', response);
-                console.log('フォールバックとして直接ストレージをチェックします');
-                
-                // フォールバック: 直接ストレージをチェック
-                const fallbackResult = await chrome.storage.local.get(['experimentId', 'consentGiven']);
-                console.log('直接取得したストレージデータ:', fallbackResult);
-                
-                const isFirstTime = !fallbackResult.experimentId || !fallbackResult.consentGiven;
-                if (isFirstTime) {
-                    this.showConsentScreen();
-                } else {
-                    this.loadCurrentWorkflow();
-                }
-                return;
-            }
-            
-            if (response.error) {
-                console.error('Background script でエラーが発生:', response.error);
-                this.loadCurrentWorkflow();
-                return;
-            }
-            
-            if (response.isFirstTime) {
-                console.log('初回利用です。確認画面を表示します。');
-                this.showConsentScreen();
-            } else {
-                console.log('既存ユーザーです。ワークフローを読み込みます。');
-                this.loadCurrentWorkflow();
-            }
-        } catch (error) {
-            console.error('初回利用チェックに失敗しました:', error);
-            
-            // エラーが runtime の接続問題の場合
-            if (error.message && error.message.includes('Extension context invalidated')) {
-                console.log('拡張機能のコンテキストが無効化されています。ページをリロードしてください。');
-                location.reload();
-                return;
-            }
-            
-            // その他のエラーの場合はフォールバック
-            console.log('フォールバックとして既存ユーザー処理を実行します');
-            this.loadCurrentWorkflow();
-        }
-    }
-
-    // 確認画面を表示
-    showConsentScreen() {
-        // 現在のコンテンツを隠す
-        document.getElementById('app').style.display = 'none';
-
-        // 確認画面を表示
-        const consentFrame = document.createElement('iframe');
-        consentFrame.src = chrome.runtime.getURL('views/consent-screen.html');
-        consentFrame.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
-            z-index: 10000;
-        `;
-        document.body.appendChild(consentFrame);
+    showSuccessMessage(message) {
+        MessageToast.success(message);
     }
 
     // メッセージリスナーを追加
@@ -1188,7 +345,7 @@ class FocusLauncher {
         chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             console.log('メッセージを受信:', request);
             if (request.action === 'showConsentScreen') {
-                this.showConsentScreen();
+                FirstTimeChecker.showConsentScreen();
             }
             if (request.action === 'reloadPage') {
                 window.location.reload();
@@ -1197,122 +354,19 @@ class FocusLauncher {
     }
 
     async checkOverlay() {
-        const result = await chrome.storage.local.get(['waitingForConfirmation']);
-        if (result.waitingForConfirmation) {
-            this.showOverlay();
-        }
-    }
-
-    showOverlay() {
-        const overlay = document.createElement('div');
-        overlay.id = 'confirmation-overlay';
-
-        const box = document.createElement('div');
-        box.className = 'overlay-box';
-
-        // タイトル
-        const title = document.createElement('h2');
-        title.className = 'overlay-title';
-        title.textContent = '利用目的の再確認';
-
-        // 説明文
-        const description = document.createElement('p');
-        description.className = 'overlay-description';
-        description.innerHTML = `
-            しばらく作業から離れていたようですね。<br>
-            あなたの現在の利用目的を入力してください。<br>
-            <strong>利用目的が変わった場合、前のワークフローは終了します。</strong>
-        `;
-
-        // 入力欄
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'overlay-input';
-        input.placeholder = 'ここに「今」の利用目的を入力してください';
-
-        // ボタン
-        const button = document.createElement('button');
-        button.className = 'overlay-button';
-        button.textContent = '確認';
-        button.disabled = true;
-
-        // 入力時のイベント
-        input.addEventListener('input', () => {
-            button.disabled = input.value.trim().length === 0;
-        });
-
-        // ボタンクリック時のイベント
-        button.addEventListener('click', async () => {
-            const userInput = input.value.trim();
-            if (!userInput) return;
-        
-
-            // 進行中表示に切り替え
-            button.textContent = "判定中...";
-            button.style.backgroundColor = "#aaa"; // グレーっぽくする
-            button.disabled = true;
-
-            // Gemini APIに送信（新しいモジュールを使用）
-            const isSamePurpose = await GeminiClient.checkPurposeSimilarity(this.currentWorkflow.text, userInput);
-        
-            // 意図再確認履歴に追加
-            const purposeCheck = {
-                text: userInput,
-                isSamePurpose: isSamePurpose,
-                timestamp: Date.now()
-            };
-
-            this.currentWorkflow.purposeChecks.push(purposeCheck);
-            await chrome.storage.local.set({ currentWorkflow: this.currentWorkflow });
-
-            if (isSamePurpose) {
-                console.log("[DEBUG] 利用目的は一致 → 継続");
-                button.textContent = "目的一致 ✅";
-                button.style.backgroundColor = "#28a745"; // 緑
-                button.disabled = false;
-                await chrome.storage.local.set({ waitingForConfirmation: false });
-
-                // 1秒後にタブを閉じる
-                setTimeout(() => {
-                    overlay.remove();
-                    chrome.tabs.getCurrent((tab) => {
-                        if (tab) {
-                            chrome.tabs.remove(tab.id);
-                        }
-                    });
-                }, 1000);
-            } else {
-                console.log("[DEBUG] 利用目的が変化 → ワークフロー終了");
-                button.textContent = "目的変更 🔄";
-                button.style.backgroundColor = "#ed9121"; // オレンジ
-                button.disabled = false;
-                await chrome.storage.local.set({ waitingForConfirmation: false });
-                setTimeout(() => {
-                    overlay.remove();
+        const shouldShow = await this.idleOverlay.shouldShow();
+        if (shouldShow && this.currentWorkflow) {
+            await this.idleOverlay.show(
+                this.currentWorkflow,
+                () => {
+                    // 目的が同じ場合は何もしない（タブは自動で閉じる）
+                },
+                () => {
+                    // 目的が異なる場合は振り返り画面へ
                     this.showReflectionScreen();
-                }, 1000);
-            }
-        });
-
-        // Enterキーでの確認
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !button.disabled) {
-                button.click();
-            }
-        });
-
-        // 要素を組み立て
-        box.appendChild(title);
-        box.appendChild(description);
-        box.appendChild(input);
-        box.appendChild(button);
-        overlay.appendChild(box);
-        document.body.appendChild(overlay);
-
-        // 入力欄にフォーカス
-        setTimeout(() => {
-            input.focus();
-        }, 100);
+                }
+            );
+        }
     }
 }
 

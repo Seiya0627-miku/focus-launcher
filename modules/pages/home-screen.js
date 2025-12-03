@@ -17,7 +17,7 @@ export class HomeScreen {
         aiContent.innerHTML = workflow.aiContent.content;
 
         // クイックアクションを更新
-        await HomeScreenUI.updateQuickActions(workflow.aiContent.actions, onActionRemove);
+        await HomeScreen.updateQuickActions(workflow.aiContent.actions, onActionRemove);
     }
 
     /**
@@ -35,7 +35,7 @@ export class HomeScreen {
             actionCard.className = 'action-card';
 
             // ファビコンを取得
-            const faviconUrl = await HomeScreenUI.getFavicon(action.url);
+            const faviconUrl = await HomeScreen.getFavicon(action.url);
 
             actionCard.innerHTML = `
                 <button class="remove-button" data-index="${i}" title="このアプリを削除">✕</button>

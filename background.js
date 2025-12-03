@@ -178,38 +178,51 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
 });
 
-// ページ訪問追跡（background.jsで実行）
+// ページ訪問追跡用の共通関数
+async function trackPage(tab) {
+    if (!tab || !tab.url) return;
+
+    // ワークフローが存在するかチェック
+    const result = await chrome.storage.local.get(['currentWorkflow', 'currentWorkflowVisitedPages']);
+    if (!result.currentWorkflow) return;
+
+    // 内部ページは除外
+    if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+        return;
+    }
+
+    const pageInfo = {
+        title: tab.title || '無題のページ',
+        url: tab.url,
+        timestamp: Date.now()
+    };
+
+    const visitedPages = result.currentWorkflowVisitedPages || [];
+
+    // 重複チェック（同じURLで最近アクセスした場合は除外）
+    const recentVisit = visitedPages.find(page =>
+        page.url === tab.url &&
+        (Date.now() - page.timestamp) < 3000 // 3秒以内
+    );
+
+    if (!recentVisit) {
+        visitedPages.push(pageInfo);
+        await chrome.storage.local.set({ currentWorkflowVisitedPages: visitedPages });
+        console.log('[PAGE TRACKING] ページを追跡しました:', pageInfo.title, pageInfo.url);
+    }
+}
+
+// ページ訪問追跡（タブ更新時）
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if (changeInfo.status === 'complete' && tab.url) {
-        // ワークフローが存在するかチェック
-        const result = await chrome.storage.local.get(['currentWorkflow', 'currentWorkflowVisitedPages']);
-        if (!result.currentWorkflow) return;
-
-        // 内部ページは除外
-        if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
-            return;
-        }
-
-        const pageInfo = {
-            title: tab.title || '無題のページ',
-            url: tab.url,
-            timestamp: Date.now()
-        };
-
-        const visitedPages = result.currentWorkflowVisitedPages || [];
-
-        // 重複チェック（同じURLで最近アクセスした場合は除外）
-        const recentVisit = visitedPages.find(page =>
-            page.url === tab.url &&
-            (Date.now() - page.timestamp) < 3000 // 3秒以内
-        );
-
-        if (!recentVisit) {
-            visitedPages.push(pageInfo);
-            await chrome.storage.local.set({ currentWorkflowVisitedPages: visitedPages });
-            console.log('[PAGE TRACKING] ページを追跡しました:', pageInfo.title, pageInfo.url);
-        }
+        await trackPage(tab);
     }
+});
+
+// ページ訪問追跡（タブ切り替え時）
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    await trackPage(tab);
 });
 
 // 新しいタブで overlay を表示
