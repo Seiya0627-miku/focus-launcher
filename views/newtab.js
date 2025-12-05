@@ -5,7 +5,7 @@ import { UrlValidator } from '../modules/utils/url-validator.js';
 import { StorageManager } from '../modules/core/storage-manager.js';
 import { WorkflowManager } from '../modules/core/workflow-manager.js';
 import { Logger } from '../modules/core/logger.js';
-import { GeminiClient } from '../modules/ai/gemini-client.js';
+import { AzureOpenAIClient } from '../modules/ai/azure-openai-client.js';
 import { PromptBuilder } from '../modules/ai/prompt-builder.js';
 import { MockResponseGenerator } from '../modules/ai/mock-response-generator.js';
 import { FeedbackProcessor } from '../modules/features/feedback-processor.js';
@@ -225,15 +225,15 @@ class FocusLauncher {
     async processFeedbackWithAI(feedbackText) {
         const prompt = PromptBuilder.buildFeedbackPrompt(this.currentWorkflow, feedbackText);
 
-        // APIキーが設定されている場合はGemini APIを使用
-        if (GeminiClient.hasApiKey()) {
+        // APIキーが設定されている場合はAzure OpenAI APIを使用
+        if (AzureOpenAIClient.hasApiKey()) {
             try {
-                const result = await GeminiClient.processFeedback(prompt);
-                console.log('Gemini APIで修正要求処理成功');
+                const result = await AzureOpenAIClient.processFeedback(prompt);
+                console.log('Azure OpenAI (GPT-5) で修正要求処理成功');
                 MessageToast.success('修正要求が正常に処理されました！');
                 return result;
             } catch (error) {
-                console.error('Gemini API呼び出しに失敗しました:', error);
+                console.error('Azure OpenAI API呼び出しに失敗しました:', error);
                 // APIが失敗した場合はフォールバック
                 const fallbackResult = FeedbackProcessor.processFeedback(feedbackText, this.currentWorkflow.aiContent);
                 MessageToast.warning('AI APIに接続できませんでした。ローカル処理で修正要求を処理しました。');
@@ -251,14 +251,14 @@ class FocusLauncher {
         const bookmarks = await this.getBookmarks();
         const prompt = PromptBuilder.buildHomeScreenPrompt(workflowText, bookmarks);
 
-        // APIキーが設定されている場合はGemini APIを使用
-        if (GeminiClient.hasApiKey()) {
+        // APIキーが設定されている場合はAzure OpenAI APIを使用
+        if (AzureOpenAIClient.hasApiKey()) {
             try {
-                const result = await GeminiClient.generateHomeScreen(prompt);
-                console.log('Gemini APIでワークフロー生成成功');
+                const result = await AzureOpenAIClient.generateHomeScreen(prompt);
+                console.log('Azure OpenAI (GPT-5) でワークフロー生成成功');
                 return result;
             } catch (error) {
-                console.error('Gemini API呼び出しに失敗しました:', error);
+                console.error('Azure OpenAI API呼び出しに失敗しました:', error);
                 // APIが失敗した場合はフォールバック
                 const fallbackResult = MockResponseGenerator.generate(workflowText);
                 MessageToast.warning('AI APIに接続できませんでした。ローカル処理でワークフローを生成しました。');

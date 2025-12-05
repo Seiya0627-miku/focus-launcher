@@ -1,6 +1,6 @@
 // アイドル時の意図再確認オーバーレイ機能
 
-import { GeminiClient } from '../ai/gemini-client.js';
+import { AzureOpenAIClient } from '../ai/azure-openai-client.js';
 import { WorkflowManager } from '../core/workflow-manager.js';
 import { StorageManager } from '../core/storage-manager.js';
 
@@ -108,8 +108,8 @@ export class IdleOverlay {
         button.style.backgroundColor = "#aaa"; // グレーっぽくする
         button.disabled = true;
 
-        // Gemini APIに送信
-        const isSamePurpose = await GeminiClient.checkPurposeSimilarity(
+        // Azure OpenAI APIに送信
+        const isSamePurpose = await AzureOpenAIClient.checkPurposeSimilarity(
             this.currentWorkflow.text,
             userInput
         );

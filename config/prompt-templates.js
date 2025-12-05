@@ -1,4 +1,4 @@
-// Gemini APIのプロンプトテンプレート
+// Azure OpenAI (GPT-5) のプロンプトテンプレート
 
 export const PROMPT_TEMPLATES = {
     // ホーム画面生成用プロンプト
