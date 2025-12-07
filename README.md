@@ -6,6 +6,16 @@ Focus Launcherは、研究や作業に集中したいユーザのために設計
 
 ## インストール手順
 
+### 開発者向け：初回セットアップ
+
+1. **API設定ファイルを作成**
+   ```bash
+   cp config/api-config.example.js config/api-config.js
+   ```
+2. `config/api-config.js` を開き、`AZURE_OPENAI_API_KEY` に実際のAPIキーを設定
+
+### 一般ユーザー向け
+
 1. **Chrome ブラウザを開く**
    - Google Chrome ブラウザを使用してください
    - 他のブラウザでは動作しません
