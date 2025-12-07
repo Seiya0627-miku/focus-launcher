@@ -49,7 +49,7 @@ class FocusLauncher {
 
         // ワークフロー終了ボタン
         document.getElementById('end-workflow').addEventListener('click', () => {
-            this.showReflectionScreen();
+            this.endWorkflow();
         });
 
         // 修正要求送信ボタン
@@ -59,7 +59,7 @@ class FocusLauncher {
 
         // 修正要求セクションのワークフロー終了ボタン
         document.getElementById('end-workflow-feedback').addEventListener('click', () => {
-            this.showReflectionScreen();
+            this.endWorkflow();
         });
 
         // Enterキーでワークフロー開始
@@ -92,7 +92,7 @@ class FocusLauncher {
         // ブラウザの閉じるイベントを監視（実際のブラウザ閉じる時のみ）
         window.addEventListener('unload', () => {
             if (!this.isRefreshing) {
-                this.showReflectionScreen();
+                this.endWorkflow();
             }
         });
     }
@@ -176,10 +176,10 @@ class FocusLauncher {
         }
 
         // ワークフロー終了の要求かチェック
-        if (feedbackText.toLowerCase().includes('ワークフローを終了') || 
+        if (feedbackText.toLowerCase().includes('ワークフローを終了') ||
             feedbackText.toLowerCase().includes('終了') ||
             feedbackText.toLowerCase().includes('やめる')) {
-            this.showReflectionScreen();
+            this.endWorkflow();
             return;
         }
 
@@ -362,8 +362,8 @@ class FocusLauncher {
                     // 目的が同じ場合は何もしない（タブは自動で閉じる）
                 },
                 () => {
-                    // 目的が異なる場合は振り返り画面へ
-                    this.showReflectionScreen();
+                    // 目的が異なる場合はワークフロー終了
+                    this.endWorkflow();
                 }
             );
         }
