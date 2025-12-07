@@ -25,11 +25,13 @@ export class IdleOverlay {
      * @param {Object} currentWorkflow - 現在のワークフロー
      * @param {Function} onSamePurpose - 目的が同じ場合のコールバック
      * @param {Function} onDifferentPurpose - 目的が異なる場合のコールバック
+     * @param {Function} onEndWorkflow - ワークフロー終了のコールバック（追加）
      */
-    async show(currentWorkflow, onSamePurpose, onDifferentPurpose) {
+    async show(currentWorkflow, onSamePurpose, onDifferentPurpose, onEndWorkflow) {
         this.currentWorkflow = currentWorkflow;
         this.onSamePurpose = onSamePurpose;
         this.onDifferentPurpose = onDifferentPurpose;
+        this.onEndWorkflow = onEndWorkflow;
 
         const overlay = document.createElement('div');
         overlay.id = 'confirmation-overlay';
@@ -57,20 +59,36 @@ export class IdleOverlay {
         input.className = 'overlay-input';
         input.placeholder = 'ここに「今」の利用目的を入力してください';
 
-        // ボタン
+        // 確認ボタン
         const button = document.createElement('button');
         button.className = 'overlay-button';
         button.textContent = '確認';
         button.disabled = true;
+
+        // ワークフロー終了ボタン
+        const endButton = document.createElement('button');
+        endButton.className = 'overlay-button overlay-button-secondary';
+        endButton.textContent = 'ワークフローを終了する';
+        endButton.style.backgroundColor = '#dc3545';
+        endButton.style.marginTop = '10px';
 
         // 入力時のイベント
         input.addEventListener('input', () => {
             button.disabled = input.value.trim().length === 0;
         });
 
-        // ボタンクリック時のイベント
+        // 確認ボタンクリック時のイベント
         button.addEventListener('click', async () => {
             await this.handleConfirmation(input.value.trim(), button, overlay);
+        });
+
+        // 終了ボタンクリック時のイベント
+        endButton.addEventListener('click', async () => {
+            await chrome.storage.local.set({ waitingForConfirmation: false });
+            overlay.remove();
+            if (this.onEndWorkflow) {
+                this.onEndWorkflow();
+            }
         });
 
         // Enterキーでの確認
@@ -85,6 +103,7 @@ export class IdleOverlay {
         box.appendChild(description);
         box.appendChild(input);
         box.appendChild(button);
+        box.appendChild(endButton);
         overlay.appendChild(box);
         document.body.appendChild(overlay);
 

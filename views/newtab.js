@@ -364,6 +364,10 @@ class FocusLauncher {
                 () => {
                     // 目的が異なる場合はワークフロー終了
                     this.endWorkflow();
+                },
+                () => {
+                    // 明示的にワークフロー終了ボタンを押した場合
+                    this.endWorkflow();
                 }
             );
         }
