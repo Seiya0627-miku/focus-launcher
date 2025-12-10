@@ -70,6 +70,7 @@ export class IdleOverlay {
         buttonContainer.style.display = 'flex';
         buttonContainer.style.gap = '10px';
         buttonContainer.style.marginTop = '10px';
+        buttonContainer.style.justifyContent = 'center';
 
         // ワークフロー終了ボタン
         const endButton = document.createElement('button');
