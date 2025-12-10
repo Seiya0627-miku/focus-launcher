@@ -1,5 +1,5 @@
 // 確認画面
-import { MessageToast } from './message-toast.js';
+import { MessageToast } from '../features/message-toast.js';
 
 export class ConsentScreen {
     constructor() {

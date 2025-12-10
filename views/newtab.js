@@ -1,6 +1,6 @@
 // Focus Launcher - メインロジック
 
-import { MessageToast } from '../modules/pages/message-toast.js';
+import { MessageToast } from '../modules/features/message-toast.js';
 import { UrlValidator } from '../modules/utils/url-validator.js';
 import { StorageManager } from '../modules/core/storage-manager.js';
 import { WorkflowManager } from '../modules/core/workflow-manager.js';

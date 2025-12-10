@@ -65,12 +65,17 @@ export class IdleOverlay {
         button.textContent = '確認';
         button.disabled = true;
 
+        // ボタンコンテナ
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.gap = '10px';
+        buttonContainer.style.marginTop = '10px';
+
         // ワークフロー終了ボタン
         const endButton = document.createElement('button');
         endButton.className = 'overlay-button overlay-button-secondary';
-        endButton.textContent = 'ワークフローを終了する';
+        endButton.textContent = '終了する';
         endButton.style.backgroundColor = '#dc3545';
-        endButton.style.marginTop = '10px';
 
         // 入力時のイベント
         input.addEventListener('input', () => {
@@ -102,8 +107,9 @@ export class IdleOverlay {
         box.appendChild(title);
         box.appendChild(description);
         box.appendChild(input);
-        box.appendChild(button);
-        box.appendChild(endButton);
+        buttonContainer.appendChild(button);
+        buttonContainer.appendChild(endButton);
+        box.appendChild(buttonContainer);
         overlay.appendChild(box);
         document.body.appendChild(overlay);
 
