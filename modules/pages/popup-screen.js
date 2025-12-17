@@ -250,15 +250,44 @@ export class PopupScreen {
                 'logs'
             ]);
 
+            // currentWorkflowが残っている場合、異常終了として扱う
+            let finalLogs = result.logs || [];
+            if (result.currentWorkflow && result.currentWorkflow.text) {
+                console.log('異常終了したワークフローを検出しました:', result.currentWorkflow.text);
+
+                // 訪問ページを取得
+                const visitedPages = result.currentWorkflowVisitedPages || [];
+                const pageEvaluations = visitedPages.map(page => ({
+                    evaluation: null, // 評価なし
+                    timestamp: page.timestamp
+                }));
+
+                // 異常終了ログを作成
+                const abnormalLog = {
+                    workflowText: result.currentWorkflow.text,
+                    startTime: result.currentWorkflow.timestamp,
+                    reflectionTime: null,
+                    endTime: Date.now(), // エクスポート時点の時刻
+                    fixRequests: result.currentWorkflow.fixRequests || [],
+                    purposeChecks: result.currentWorkflow.purposeChecks || [],
+                    clarificationQuestions: result.currentWorkflow.clarificationQuestions || [],
+                    pageEvaluations: pageEvaluations,
+                    abnormalEnd: true // 異常終了フラグ
+                };
+
+                // logsの最後に追加
+                finalLogs = [...finalLogs, abnormalLog];
+            }
+
             // エクスポート用データを整理
             const exportData = {
                 experimentId: result.experimentId,
                 consentGiven: result.consentGiven,
                 firstUsedAt: result.firstUsedAt,
                 bookmarks: result.bookmarks || [],
-                logs: result.logs || [],
+                logs: finalLogs,
                 exportTimestamp: new Date().toISOString(),
-                exportVersion: "1.2.0"
+                exportVersion: "1.3.0"
             };
 
             // JSONファイルとしてダウンロード

@@ -123,6 +123,42 @@ class FocusLauncher {
             return;
         }
 
+        // 既存のワークフローが残っている場合、異常終了として保存
+        const existingWorkflow = await StorageManager.getCurrentWorkflow();
+        if (existingWorkflow && existingWorkflow.text) {
+            console.log('異常終了したワークフローを検出しました:', existingWorkflow.text);
+
+            try {
+                // 訪問ページを取得
+                const visitedPages = await StorageManager.getVisitedPages();
+                const pageEvaluations = visitedPages.map(page => ({
+                    evaluation: null, // 評価なし
+                    timestamp: page.timestamp
+                }));
+
+                // 異常終了ログを作成
+                const abnormalLog = Logger.createWorkflowCompletedLog({
+                    workflowText: existingWorkflow.text,
+                    startTime: existingWorkflow.timestamp,
+                    reflectionTime: null,
+                    endTime: Date.now(), // 現在時刻
+                    fixRequests: existingWorkflow.fixRequests || [],
+                    purposeChecks: existingWorkflow.purposeChecks || [],
+                    clarificationQuestions: existingWorkflow.clarificationQuestions || [],
+                    pageEvaluations: pageEvaluations
+                });
+
+                // 異常終了フラグを追加
+                abnormalLog.abnormalEnd = true;
+
+                // ログを保存
+                await Logger.save('workflow_completed', abnormalLog);
+                console.log('異常終了ワークフローをログに保存しました:', abnormalLog);
+            } catch (error) {
+                console.error('異常終了ワークフローの保存に失敗しました:', error);
+            }
+        }
+
         // ページ追跡をリセット
         this.visitedPages = [];
         await chrome.storage.local.remove(['currentWorkflowVisitedPages']);
@@ -401,10 +437,49 @@ class FocusLauncher {
 
     // ワークフローを終了する関数
     async endWorkflow() {
-        await WorkflowManager.end();
-        this.currentWorkflow = null;
-        this.visitedPages = [];
-        WorkflowScreen.showWorkflowInput();
+        try {
+            // ワークフローが存在する場合のみログを保存
+            if (this.currentWorkflow) {
+                // 訪問ページを取得
+                const visitedPages = await StorageManager.getVisitedPages();
+
+                // ページ評価は記録しない（振り返り画面をスキップするため）
+                const pageEvaluations = visitedPages.map(page => ({
+                    evaluation: null, // 評価なし
+                    timestamp: page.timestamp
+                }));
+
+                // 統一ログを作成
+                const unifiedLog = Logger.createWorkflowCompletedLog({
+                    workflowText: this.currentWorkflow.text,
+                    startTime: this.currentWorkflow.timestamp,
+                    reflectionTime: null, // 振り返り画面なし
+                    endTime: Date.now(),
+                    fixRequests: this.currentWorkflow.fixRequests || [],
+                    purposeChecks: this.currentWorkflow.purposeChecks || [],
+                    clarificationQuestions: this.currentWorkflow.clarificationQuestions || [],
+                    pageEvaluations: pageEvaluations
+                });
+
+                // ログを保存
+                await Logger.save('workflow_completed', unifiedLog);
+                console.log('ワークフロー完了ログを保存しました:', unifiedLog);
+            }
+
+            // ワークフローを削除
+            await WorkflowManager.end();
+            this.currentWorkflow = null;
+            this.visitedPages = [];
+            WorkflowScreen.showWorkflowInput();
+
+        } catch (error) {
+            console.error('ワークフロー終了処理に失敗しました:', error);
+            // エラーが発生してもワークフローは終了する
+            await WorkflowManager.end();
+            this.currentWorkflow = null;
+            this.visitedPages = [];
+            WorkflowScreen.showWorkflowInput();
+        }
     }
 
     showWorkflowInput() {
