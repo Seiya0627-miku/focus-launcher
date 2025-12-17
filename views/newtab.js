@@ -117,16 +117,16 @@ class FocusLauncher {
 
     async startWorkflow() {
         const workflowText = document.getElementById('workflow-textarea').value.trim();
-    
+
         if (!workflowText) {
             alert('作業目的を入力してください。');
             return;
         }
-    
+
         // ページ追跡をリセット
         this.visitedPages = [];
         await chrome.storage.local.remove(['currentWorkflowVisitedPages']);
-    
+
         // ワークフロー情報を設定
         this.currentWorkflow = {
             text: workflowText,
@@ -134,9 +134,10 @@ class FocusLauncher {
             aiContent: null,
             feedback: null,
             fixRequests: [], // 修正要求履歴を追加
-            purposeChecks: [] // 意図の再確認履歴
+            purposeChecks: [], // 意図の再確認履歴
+            clarificationQuestions: [] // 追加質問履歴
         };
-    
+
         // ストレージに保存
         await chrome.storage.local.set({ currentWorkflow: this.currentWorkflow });
         console.log('[DEBUG] ワークフローを保存しました:', this.currentWorkflow);
@@ -146,7 +147,7 @@ class FocusLauncher {
         try {
             // AI APIを呼び出してホーム画面を生成
             const aiResponse = await this.generateHomeScreen(workflowText);
-            
+
             this.currentWorkflow = {
                 ...this.currentWorkflow,
                 aiContent: aiResponse
@@ -274,7 +275,11 @@ class FocusLauncher {
 
     async updateHomeScreen() {
         if (!this.currentWorkflow) return;
-        await HomeScreen.update(this.currentWorkflow, (index) => this.removeAction(index));
+        await HomeScreen.update(
+            this.currentWorkflow,
+            (index) => this.removeAction(index),
+            (question, answer) => this.handleClarificationAnswer(question, answer)
+        );
     }
 
     // アクション削除
@@ -297,6 +302,76 @@ class FocusLauncher {
 
     async getBookmarks() {
         return await StorageManager.getBookmarks();
+    }
+
+    // 質問への回答を処理
+    async handleClarificationAnswer(question, answer) {
+        if (!answer) {
+            alert('回答を入力してください');
+            return;
+        }
+
+        this.showLoadingScreen();
+
+        try {
+            console.log('質問への回答を処理中:', { question, answer });
+
+            // 質問と回答をワークフローに記録
+            this.currentWorkflow = WorkflowManager.addClarificationQuestion(
+                this.currentWorkflow,
+                question,
+                answer
+            );
+
+            // ブックマークを取得
+            const bookmarks = await this.getBookmarks();
+
+            // 質問と回答を含めてホーム画面を再生成
+            const prompt = PromptBuilder.buildHomeScreenWithAnswerPrompt(
+                this.currentWorkflow.text,
+                question,
+                answer,
+                bookmarks
+            );
+
+            // APIキーが設定されている場合はAzure OpenAI APIを使用
+            let aiResponse;
+            if (AzureOpenAIClient.hasApiKey()) {
+                try {
+                    aiResponse = await AzureOpenAIClient.generateHomeScreenWithAnswer(prompt);
+                    console.log('Azure OpenAI (GPT-5) で質問回答処理成功');
+                    MessageToast.success('回答を反映したホーム画面を生成しました！');
+                } catch (error) {
+                    console.error('Azure OpenAI API呼び出しに失敗しました:', error);
+                    // APIが失敗した場合はフォールバック
+                    aiResponse = MockResponseGenerator.generate(this.currentWorkflow.text);
+                    MessageToast.warning('AI APIに接続できませんでした。ローカル処理でホーム画面を生成しました。');
+                }
+            } else {
+                // APIキーが設定されていない場合はモックデータを使用
+                aiResponse = MockResponseGenerator.generate(this.currentWorkflow.text);
+                MessageToast.warning('AI APIキーが設定されていません。ローカル処理でホーム画面を生成しました。');
+            }
+
+            // ワークフローを更新（clarificationQuestionをクリア）
+            this.currentWorkflow = {
+                ...this.currentWorkflow,
+                aiContent: aiResponse
+            };
+
+            // ストレージに保存
+            await WorkflowManager.update(this.currentWorkflow);
+
+            this.showHomeScreen();
+            this.updateHomeScreen();
+
+            console.log('質問回答処理が完了しました');
+
+        } catch (error) {
+            console.error('質問回答処理に失敗しました:', error);
+            alert('質問回答処理に失敗しました。もう一度お試しください。');
+            this.showHomeScreen();
+        }
     }
 
     // 振り返り画面に遷移する関数

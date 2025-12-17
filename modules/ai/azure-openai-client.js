@@ -41,6 +41,40 @@ export class AzureOpenAIClient {
     }
 
     /**
+     * Azure OpenAI APIを呼び出して質問への回答を含めたホーム画面を生成
+     * @param {string} prompt - 送信するプロンプト
+     * @returns {Promise<Object>} AI応答（title, content, actions）
+     */
+    static async generateHomeScreenWithAnswer(prompt) {
+        console.log('Azure OpenAI APIに質問回答を送信中...');
+
+        const messages = [
+            {
+                role: 'system',
+                content: 'あなたは研究や作業を効率化するためのアシスタントです。ユーザーの作業目的と追加情報に基づいて、最適なホーム画面を生成します。必ず指定されたJSON形式で回答してください。'
+            },
+            {
+                role: 'user',
+                content: prompt
+            }
+        ];
+
+        const response = await AzureOpenAIClient.callAPI(messages);
+        const aiText = response.choices[0].message.content;
+
+        // JSONレスポンスを解析
+        const aiResponse = AzureOpenAIClient.parseResponse(aiText);
+
+        // レスポンスの検証
+        if (!aiResponse.title || !aiResponse.content || !aiResponse.actions) {
+            throw new Error('APIレスポンスの形式が無効です');
+        }
+
+        console.log('質問回答を含むホーム画面生成成功:', aiResponse);
+        return aiResponse;
+    }
+
+    /**
      * Azure OpenAI APIを呼び出して修正要求を処理
      * @param {string} prompt - 送信するプロンプト
      * @returns {Promise<Object>} AI応答（title, content, actions）

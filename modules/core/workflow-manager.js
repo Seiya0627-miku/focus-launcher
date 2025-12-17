@@ -17,7 +17,8 @@ export class WorkflowManager {
             aiContent: aiContent,
             feedback: null,
             fixRequests: [],
-            purposeChecks: []
+            purposeChecks: [],
+            clarificationQuestions: []
         };
 
         await StorageManager.set({ currentWorkflow: workflow });
@@ -96,6 +97,26 @@ export class WorkflowManager {
         return {
             ...workflow,
             purposeChecks: [...(workflow.purposeChecks || []), purposeCheck]
+        };
+    }
+
+    /**
+     * ワークフローに追加質問と回答を追加
+     * @param {Object} workflow - ワークフロー
+     * @param {string} question - 追加の質問
+     * @param {string} answer - ユーザーの回答
+     * @returns {Object} 更新されたワークフロー
+     */
+    static addClarificationQuestion(workflow, question, answer) {
+        const clarification = {
+            question: question,
+            answer: answer,
+            timestamp: Date.now()
+        };
+
+        return {
+            ...workflow,
+            clarificationQuestions: [...(workflow.clarificationQuestions || []), clarification]
         };
     }
 

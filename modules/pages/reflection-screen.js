@@ -142,6 +142,7 @@ export class ReflectionScreen {
                 endTime: Date.now(),
                 fixRequests: currentWorkflow.fixRequests || [],
                 purposeChecks: currentWorkflow.purposeChecks || [],
+                clarificationQuestions: currentWorkflow.clarificationQuestions || [],
                 pageEvaluations: pageEvaluations
             });
 

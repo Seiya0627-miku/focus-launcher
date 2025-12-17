@@ -42,6 +42,7 @@ export class Logger {
      * @param {number} params.endTime - 終了時刻
      * @param {Array} params.fixRequests - 修正要求履歴
      * @param {Array} params.purposeChecks - 意図再確認履歴
+     * @param {Array} params.clarificationQuestions - 追加質問履歴
      * @param {Array} params.pageEvaluations - ページ評価
      * @returns {Object} 統一ログオブジェクト
      */
@@ -53,6 +54,7 @@ export class Logger {
             endTime: params.endTime,
             fixRequests: params.fixRequests || [],
             purposeChecks: params.purposeChecks || [],
+            clarificationQuestions: params.clarificationQuestions || [],
             pageEvaluations: params.pageEvaluations || []
         };
     }

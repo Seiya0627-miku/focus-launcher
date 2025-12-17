@@ -11,7 +11,9 @@ export class PromptBuilder {
      * @returns {string} 完成したプロンプト
      */
     static buildHomeScreenPrompt(workflowText, bookmarks = []) {
-        let prompt = PROMPT_TEMPLATES.HOME_SCREEN.replace('{workflow}', workflowText);
+        let prompt = PROMPT_TEMPLATES.HOME_SCREEN
+            .replace('{workflow}', workflowText)
+            .replace('{bookmarkCount}', bookmarks.length);
 
         // ブックマーク情報を追加
         if (bookmarks.length > 0) {
@@ -43,6 +45,35 @@ export class PromptBuilder {
         prompt = prompt.replace('{currentContent}', currentContent);
         prompt = prompt.replace('{currentActions}', currentActions.map(a => a.title).join(', '));
         prompt = prompt.replace('{feedbackText}', feedbackText);
+
+        return prompt;
+    }
+
+    /**
+     * 質問への回答を含めたホーム画面生成用プロンプトを作成
+     * @param {string} workflowText - ワークフローのテキスト
+     * @param {string} question - 追加の質問
+     * @param {string} answer - ユーザーの回答
+     * @param {Array} bookmarks - ブックマークの配列
+     * @returns {string} 完成したプロンプト
+     */
+    static buildHomeScreenWithAnswerPrompt(workflowText, question, answer, bookmarks = []) {
+        let prompt = PROMPT_TEMPLATES.HOME_SCREEN_WITH_ANSWER
+            .replace('{workflow}', workflowText)
+            .replace('{question}', question)
+            .replace('{answer}', answer)
+            .replace('{bookmarkCount}', bookmarks.length);
+
+        // ブックマーク情報を追加
+        if (bookmarks.length > 0) {
+            let bookmarkContext = '\n\n関連するブックマーク（優先的に活用してください）:\n';
+            bookmarks.forEach((bookmark, index) => {
+                bookmarkContext += `${index + 1}. ${bookmark.title}\n`;
+                bookmarkContext += `   URL: ${bookmark.url}\n`;
+                bookmarkContext += `   目的: ${bookmark.purpose}\n\n`;
+            });
+            prompt += bookmarkContext;
+        }
 
         return prompt;
     }

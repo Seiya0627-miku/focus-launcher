@@ -5,8 +5,9 @@ export class HomeScreen {
      * ホーム画面を更新
      * @param {Object} workflow - ワークフロー情報
      * @param {Function} onActionRemove - アクション削除時のコールバック
+     * @param {Function} onClarificationSubmit - 質問回答送信時のコールバック
      */
-    static async update(workflow, onActionRemove) {
+    static async update(workflow, onActionRemove, onClarificationSubmit = null) {
         if (!workflow || !workflow.aiContent) return;
 
         // タイトルを更新
@@ -14,7 +15,59 @@ export class HomeScreen {
 
         // AI生成コンテンツを更新
         const aiContent = document.getElementById('ai-generated-content');
-        aiContent.innerHTML = workflow.aiContent.content;
+
+        // 質問がある場合は質問表示
+        if (workflow.aiContent.clarificationQuestion) {
+            aiContent.style.display = 'block';
+            aiContent.style.padding = '20px 30px'; // 高さを減らすためにpaddingを調整
+            aiContent.innerHTML = `
+                <div class="clarification-box">
+                    <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 8px; color: #333;">追加の質問があります</h3>
+                    <p style="font-size: 0.95rem; color: #666; margin-bottom: 15px; line-height: 1.5;">${workflow.aiContent.clarificationQuestion}</p>
+                    <div class="answer-input-container" style="display: flex; flex-direction: column; gap: 12px;">
+                        <textarea
+                            id="clarification-answer-input"
+                            placeholder="回答を入力してください"
+                            rows="2"
+                            style="width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical; min-height: 40px; transition: border-color 0.3s ease;"
+                        ></textarea>
+                        <button id="submit-clarification-btn" class="primary-button" style="padding: 10px 20px; font-size: 0.95rem;">
+                            回答を送信
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // 回答送信ボタンのイベントリスナーを追加
+            if (onClarificationSubmit) {
+                const submitBtn = document.getElementById('submit-clarification-btn');
+                const answerInput = document.getElementById('clarification-answer-input');
+
+                // フォーカス時のスタイル
+                answerInput.addEventListener('focus', () => {
+                    answerInput.style.outline = 'none';
+                    answerInput.style.borderColor = '#667eea';
+                    answerInput.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                });
+
+                answerInput.addEventListener('blur', () => {
+                    answerInput.style.borderColor = '#e1e5e9';
+                    answerInput.style.boxShadow = 'none';
+                });
+
+                submitBtn.addEventListener('click', () => {
+                    const answer = answerInput.value.trim();
+                    if (answer) {
+                        onClarificationSubmit(workflow.aiContent.clarificationQuestion, answer);
+                    } else {
+                        alert('回答を入力してください');
+                    }
+                });
+            }
+        } else {
+            // 質問がない場合はコンテンツ全体を非表示
+            aiContent.style.display = 'none';
+        }
 
         // クイックアクションを更新
         await HomeScreen.updateQuickActions(workflow.aiContent.actions, onActionRemove);
