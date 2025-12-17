@@ -250,6 +250,25 @@ export class PopupScreen {
                 'logs'
             ]);
 
+            // タイムスタンプを西暦表記に変換する関数
+            const convertTimestampToISO = (timestamp) => {
+                return timestamp ? new Date(timestamp).toISOString() : null;
+            };
+
+            // ログのタイムスタンプを変換する関数
+            const convertLogTimestamps = (log) => {
+                return {
+                    ...log,
+                    startTime: convertTimestampToISO(log.startTime),
+                    endTime: convertTimestampToISO(log.endTime),
+                    reflectionTime: convertTimestampToISO(log.reflectionTime),
+                    pageEvaluations: (log.pageEvaluations || []).map(pe => ({
+                        ...pe,
+                        timestamp: convertTimestampToISO(pe.timestamp)
+                    }))
+                };
+            };
+
             // currentWorkflowが残っている場合、異常終了として扱う
             let finalLogs = result.logs || [];
             if (result.currentWorkflow && result.currentWorkflow.text) {
@@ -279,13 +298,16 @@ export class PopupScreen {
                 finalLogs = [...finalLogs, abnormalLog];
             }
 
+            // 全てのログのタイムスタンプを西暦表記に変換
+            const convertedLogs = finalLogs.map(convertLogTimestamps);
+
             // エクスポート用データを整理
             const exportData = {
                 experimentId: result.experimentId,
                 consentGiven: result.consentGiven,
                 firstUsedAt: result.firstUsedAt,
                 bookmarks: result.bookmarks || [],
-                logs: finalLogs,
+                logs: convertedLogs,
                 exportTimestamp: new Date().toISOString(),
                 exportVersion: "1.3.0"
             };
