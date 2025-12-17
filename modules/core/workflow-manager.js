@@ -13,6 +13,7 @@ export class WorkflowManager {
     static async start(workflowText, aiContent = null) {
         const workflow = {
             text: workflowText,
+            enrichedContext: workflowText, // 初期値は元のテキストと同じ
             timestamp: Date.now(),
             aiContent: aiContent,
             feedback: null,
@@ -117,6 +118,19 @@ export class WorkflowManager {
         return {
             ...workflow,
             clarificationQuestions: [...(workflow.clarificationQuestions || []), clarification]
+        };
+    }
+
+    /**
+     * enrichedContextを更新
+     * @param {Object} workflow - ワークフロー
+     * @param {string} enrichedContext - 新しいenrichedContext
+     * @returns {Object} 更新されたワークフロー
+     */
+    static updateEnrichedContext(workflow, enrichedContext) {
+        return {
+            ...workflow,
+            enrichedContext: enrichedContext
         };
     }
 

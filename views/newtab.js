@@ -130,6 +130,7 @@ class FocusLauncher {
         // ワークフロー情報を設定
         this.currentWorkflow = {
             text: workflowText,
+            enrichedContext: workflowText, // 初期値は元のテキストと同じ
             timestamp: Date.now(),
             aiContent: null,
             feedback: null,
@@ -326,13 +327,15 @@ class FocusLauncher {
             // ブックマークを取得
             const bookmarks = await this.getBookmarks();
 
-            // 質問と回答を含めてホーム画面を再生成
+            // enrichedContextを使ってプロンプトを生成（質問文は送らない）
+            const enrichedContext = this.currentWorkflow.enrichedContext || this.currentWorkflow.text;
             const prompt = PromptBuilder.buildHomeScreenWithAnswerPrompt(
-                this.currentWorkflow.text,
-                question,
+                enrichedContext,
                 answer,
                 bookmarks
             );
+
+            console.log('現在のenrichedContext:', enrichedContext);
 
             // APIキーが設定されている場合はAzure OpenAI APIを使用
             let aiResponse;
@@ -341,6 +344,15 @@ class FocusLauncher {
                     aiResponse = await AzureOpenAIClient.generateHomeScreenWithAnswer(prompt);
                     console.log('Azure OpenAI (GPT-5) で質問回答処理成功');
                     MessageToast.success('回答を反映したホーム画面を生成しました！');
+
+                    // enrichedContextを更新
+                    if (aiResponse.enrichedContext) {
+                        this.currentWorkflow = WorkflowManager.updateEnrichedContext(
+                            this.currentWorkflow,
+                            aiResponse.enrichedContext
+                        );
+                        console.log('enrichedContextを更新:', aiResponse.enrichedContext);
+                    }
                 } catch (error) {
                     console.error('Azure OpenAI API呼び出しに失敗しました:', error);
                     // APIが失敗した場合はフォールバック
@@ -353,7 +365,7 @@ class FocusLauncher {
                 MessageToast.warning('AI APIキーが設定されていません。ローカル処理でホーム画面を生成しました。');
             }
 
-            // ワークフローを更新（clarificationQuestionをクリア）
+            // ワークフローを更新
             this.currentWorkflow = {
                 ...this.currentWorkflow,
                 aiContent: aiResponse

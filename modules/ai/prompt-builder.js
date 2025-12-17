@@ -51,16 +51,14 @@ export class PromptBuilder {
 
     /**
      * 質問への回答を含めたホーム画面生成用プロンプトを作成
-     * @param {string} workflowText - ワークフローのテキスト
-     * @param {string} question - 追加の質問
+     * @param {string} enrichedContext - 統合された作業目的（enrichedContext）
      * @param {string} answer - ユーザーの回答
      * @param {Array} bookmarks - ブックマークの配列
      * @returns {string} 完成したプロンプト
      */
-    static buildHomeScreenWithAnswerPrompt(workflowText, question, answer, bookmarks = []) {
+    static buildHomeScreenWithAnswerPrompt(enrichedContext, answer, bookmarks = []) {
         let prompt = PROMPT_TEMPLATES.HOME_SCREEN_WITH_ANSWER
-            .replace('{workflow}', workflowText)
-            .replace('{question}', question)
+            .replace('{workflow}', enrichedContext)
             .replace('{answer}', answer)
             .replace('{bookmarkCount}', bookmarks.length);
 

@@ -43,7 +43,7 @@ export class AzureOpenAIClient {
     /**
      * Azure OpenAI APIを呼び出して質問への回答を含めたホーム画面を生成
      * @param {string} prompt - 送信するプロンプト
-     * @returns {Promise<Object>} AI応答（title, content, actions）
+     * @returns {Promise<Object>} AI応答（title, content, actions, clarificationQuestion, enrichedContext）
      */
     static async generateHomeScreenWithAnswer(prompt) {
         console.log('Azure OpenAI APIに質問回答を送信中...');
@@ -66,11 +66,12 @@ export class AzureOpenAIClient {
         const aiResponse = AzureOpenAIClient.parseResponse(aiText);
 
         // レスポンスの検証
-        if (!aiResponse.title || !aiResponse.content || !aiResponse.actions) {
-            throw new Error('APIレスポンスの形式が無効です');
+        if (!aiResponse.title || !aiResponse.content || !aiResponse.actions || !aiResponse.enrichedContext) {
+            throw new Error('APIレスポンスの形式が無効です（enrichedContextが必要です）');
         }
 
         console.log('質問回答を含むホーム画面生成成功:', aiResponse);
+        console.log('enrichedContext:', aiResponse.enrichedContext);
         return aiResponse;
     }
 
