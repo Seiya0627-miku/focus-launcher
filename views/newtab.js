@@ -207,7 +207,7 @@ class FocusLauncher {
 
     async submitFeedback() {
         const feedbackText = document.getElementById('feedback-textarea').value.trim();
-        
+
         if (!feedbackText) {
             alert('修正要求を入力してください');
             return;
@@ -221,7 +221,7 @@ class FocusLauncher {
             return;
         }
 
-        this.showLoadingScreen();
+        WorkflowScreen.showLoadingOverlay();
 
         try {
             console.log('修正要求処理:', feedbackText);
@@ -256,7 +256,7 @@ class FocusLauncher {
         } catch (error) {
             console.error('修正要求の処理に失敗しました:', error);
             alert('修正要求の処理に失敗しました。もう一度お試しください。');
-            this.showHomeScreen();
+            WorkflowScreen.hideLoadingOverlay();
         }
     }
 
@@ -348,7 +348,7 @@ class FocusLauncher {
             return;
         }
 
-        this.showLoadingScreen();
+        WorkflowScreen.showLoadingOverlay();
 
         try {
             console.log('質問への回答を処理中:', { question, answer });
@@ -418,7 +418,7 @@ class FocusLauncher {
         } catch (error) {
             console.error('質問回答処理に失敗しました:', error);
             alert('質問回答処理に失敗しました。もう一度お試しください。');
-            this.showHomeScreen();
+            WorkflowScreen.hideLoadingOverlay();
         }
     }
 

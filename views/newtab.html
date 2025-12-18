@@ -39,7 +39,7 @@
                 <div id="ai-generated-content" class="ai-content">
                     <!-- AIが生成したコンテンツがここに表示される -->
                 </div>
-                
+
                 <div class="quick-actions">
                     <h3>よく使うツール</h3>
                     <div id="quick-actions-grid" class="actions-grid">
@@ -52,8 +52,8 @@
                     <h3>📝 ツールの追加・修正</h3>
                     <p>必要なツールが不足している場合や、追加したいツールがあれば教えてください。</p>
                     <div class="feedback-input-container">
-                        <textarea 
-                            id="feedback-textarea" 
+                        <textarea
+                            id="feedback-textarea"
                             placeholder="例：Google Slidesを追加して、プレゼンテーション作成をサポートしてほしい"
                             rows="2"
                         ></textarea>
@@ -66,6 +66,14 @@
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- ローディングオーバーレイ -->
+            <div id="loading-overlay" class="loading-overlay hidden">
+                <div class="loading-overlay-content">
+                    <div class="spinner"></div>
+                    <p>更新中...</p>
                 </div>
             </div>
         </div>

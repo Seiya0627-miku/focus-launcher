@@ -347,6 +347,37 @@ body {
     color: #666;
 }
 
+/* ローディングオーバーレイ（ホーム画面上） */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    border-radius: 20px;
+}
+
+.loading-overlay-content {
+    text-align: center;
+}
+
+.loading-overlay-content p {
+    font-size: 1rem;
+    color: #667eea;
+    font-weight: 600;
+}
+
+/* home-screen にposition: relativeを追加（オーバーレイの基準点） */
+.home-container {
+    position: relative;
+}
+
 /* オーバーレイのスタイル */
 #confirmation-overlay {
     position: fixed;

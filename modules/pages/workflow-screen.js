@@ -20,6 +20,8 @@ export class WorkflowScreen {
         document.getElementById('workflow-input').classList.add('hidden');
         document.getElementById('home-screen').classList.remove('hidden');
         document.getElementById('loading-screen').classList.add('hidden');
+        // ローディングオーバーレイも非表示
+        WorkflowScreen.hideLoadingOverlay();
     }
 
     /**
@@ -29,5 +31,19 @@ export class WorkflowScreen {
         document.getElementById('workflow-input').classList.add('hidden');
         document.getElementById('home-screen').classList.add('hidden');
         document.getElementById('loading-screen').classList.remove('hidden');
+    }
+
+    /**
+     * ローディングオーバーレイを表示（ホーム画面上）
+     */
+    static showLoadingOverlay() {
+        document.getElementById('loading-overlay').classList.remove('hidden');
+    }
+
+    /**
+     * ローディングオーバーレイを非表示
+     */
+    static hideLoadingOverlay() {
+        document.getElementById('loading-overlay').classList.add('hidden');
     }
 }
