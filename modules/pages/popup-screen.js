@@ -265,6 +265,18 @@ export class PopupScreen {
                     pageEvaluations: (log.pageEvaluations || []).map(pe => ({
                         ...pe,
                         timestamp: convertTimestampToISO(pe.timestamp)
+                    })),
+                    fixRequests: (log.fixRequests || []).map(fr => ({
+                        ...fr,
+                        timestamp: convertTimestampToISO(fr.timestamp)
+                    })),
+                    purposeChecks: (log.purposeChecks || []).map(pc => ({
+                        ...pc,
+                        timestamp: convertTimestampToISO(pc.timestamp)
+                    })),
+                    clarificationQuestions: (log.clarificationQuestions || []).map(cq => ({
+                        ...cq,
+                        timestamp: convertTimestampToISO(cq.timestamp)
                     }))
                 };
             };
