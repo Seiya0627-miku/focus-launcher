@@ -68,6 +68,19 @@ export const PROMPT_TEMPLATES = {
   * 作業に必要と思われるページだけ提案してください
   * {bookmarkCount}個のブックマークが既に存在する場合を除き、**必ず5個以下**にしてください
   * ページを必ず1つ以上提案してください
+- **【重要】URLの具体化**：
+  * 検索エンジン、予約サイト、ECサイトなどでは、作業目的に関連する具体的な検索クエリやパラメータを含むURLを生成してください
+  * ユーザーがクリックしたときに、直接関連する結果が表示されるようにしてください
+  * 主要サイトのURL例：
+    - Google検索: https://www.google.com/search?q=金沢+温泉+旅館+おすすめ
+    - Google Scholar: https://scholar.google.com/scholar?q=機械学習+深層学習
+    - Amazon: https://www.amazon.co.jp/s?k=ノートパソコン+軽量
+    - YouTube: https://www.youtube.com/results?search_query=JavaScript+チュートリアル
+    - Wikipedia日本語: https://ja.wikipedia.org/wiki/機械学習
+    - PaperDive: https://www.paperdive.app/?q=deep+learning
+  * 例：「金沢に温泉旅行に行きたい」の場合
+    - Google検索のアクション: {"title": "Google検索", "url": "https://www.google.com/search?q=金沢+温泉+旅館", "icon": "🔍"}
+    - 宿泊予約のアクション: {"title": "じゃらん", "url": "https://www.jalan.net/travel/kanazawa/", "icon": "🏨"}
 - Google Workspaceツール（Docs、Slides、Sheets、Drive、Mailなど）は以下のURL形式で統一してください：
   * Google Docs: https://docs.google.com
   * Google Slides: https://slides.google.com
@@ -112,8 +125,14 @@ export const PROMPT_TEMPLATES = {
 - 追加要求があれば、既存のjsonの後ろに新しいツールの情報を追加してください
 - 重複は避けてください
 - 実用的で関連性の高いツールを提案してください
-- 論文を広く調べる必要がある場合はPaperDive（https://www.paperdive.app/）を必ず含める
-- Google Driveは常に含める（ファイル管理のため）
+- **【重要】URLの具体化**：
+  * 新しく追加するツールについては、検索エンジン、予約サイト、ECサイトなどで、作業目的に関連する具体的な検索クエリやパラメータを含むURLを生成してください
+  * ユーザーがクリックしたときに、直接関連する結果が表示されるようにしてください
+  * 主要サイトのURL例：
+    - Google検索: https://www.google.com/search?q=金沢+温泉+旅館+おすすめ
+    - Google Scholar: https://scholar.google.com/scholar?q=機械学習+深層学習
+    - Amazon: https://www.amazon.co.jp/s?k=ノートパソコン+軽量
+    - YouTube: https://www.youtube.com/results?search_query=JavaScript+チュートリアル
 - Google Workspaceツール（Docs、Slides、Sheets、Drive、Mailなど）は以下のURL形式で統一してください：
   * Google Docs: https://docs.google.com
   * Google Slides: https://slides.google.com
@@ -169,18 +188,26 @@ export const PROMPT_TEMPLATES = {
 
 注意事項：
 - ユーザーの回答を反映した、より具体的で実用的なツールを提案
-- 研究系の作業には学術サイトを、ビジネス系には実用的なツールを
-- ドキュメント作成にはGoogle Docs、Google Slides、Google Sheetsを優先的に提案
 - 学術系の作業にはOverleafも含める
-- 論文を広く調べる必要がある場合はPaperDive（https://www.paperdive.app/）を必ず含める
-- Google Driveは常に含める（ファイル管理のため）
 - 各アクションは具体的で実用的なものにする
 - アイコンは絵文字を使用（例：📚、🔬、✈️、📧）
 - **【重要】アクション数の厳格な制限**：
-  * 必要最小限のページのみ提案してください
+  * 作業に必要と思われるページだけ提案してください
   * {bookmarkCount}個のブックマークが既に存在する場合を除き、**必ず5個以下**にしてください
-  * 6個以上は絶対に提案しないでください
-  * 本当に必要なツールだけを厳選してください
+  * ページを必ず1つ以上提案してください
+- **【重要】URLの具体化**：
+  * 検索エンジン、予約サイト、ECサイトなどでは、作業目的に関連する具体的な検索クエリやパラメータを含むURLを生成してください
+  * ユーザーがクリックしたときに、直接関連する結果が表示されるようにしてください
+  * 主要サイトのURL例：
+    - Google検索: https://www.google.com/search?q=金沢+温泉+旅館+おすすめ
+    - Google Scholar: https://scholar.google.com/scholar?q=機械学習+深層学習
+    - Amazon: https://www.amazon.co.jp/s?k=ノートパソコン+軽量
+    - YouTube: https://www.youtube.com/results?search_query=JavaScript+チュートリアル
+    - Wikipedia日本語: https://ja.wikipedia.org/wiki/機械学習
+    - PaperDive: https://www.paperdive.app/?q=deep+learning
+  * 例：「海外旅行の計画」+「3泊4日のフランス旅行」の場合
+    - Google検索のアクション: {"title": "Google検索", "url": "https://www.google.com/search?q=フランス+旅行+3泊4日+モデルコース", "icon": "🔍"}
+    - 航空券予約のアクション: {"title": "スカイスキャナー", "url": "https://www.skyscanner.jp/flights-to/fr/cheap-flights-to-france.html", "icon": "✈️"}
 - Google Workspaceツール（Docs、Slides、Sheets、Drive、Mailなど）は以下のURL形式で統一してください：
   * Google Docs: https://docs.google.com
   * Google Slides: https://slides.google.com

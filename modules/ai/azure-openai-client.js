@@ -2,6 +2,7 @@
 // すべてのAzure OpenAI API呼び出しを一元管理
 
 import { API_CONFIG } from '../../config/api-config.js';
+import { UrlValidator } from '../utils/url-validator.js';
 
 export class AzureOpenAIClient {
     /**
@@ -37,6 +38,11 @@ export class AzureOpenAIClient {
             console.log(`アクション数が5つを超えていますが、必要なため保持します: ${aiResponse.actions.length}個`);
         }
 
+        // URL検証とサニタイゼーション
+        console.log('[Azure OpenAI] AI生成URLを検証中...');
+        aiResponse.actions = UrlValidator.validateActions(aiResponse.actions);
+        console.log(`[Azure OpenAI] URL検証完了: ${aiResponse.actions.length}個のアクションを保持`);
+
         return aiResponse;
     }
 
@@ -69,6 +75,11 @@ export class AzureOpenAIClient {
         if (!aiResponse.title || !aiResponse.content || !aiResponse.actions || !aiResponse.enrichedContext) {
             throw new Error('APIレスポンスの形式が無効です（enrichedContextが必要です）');
         }
+
+        // URL検証とサニタイゼーション
+        console.log('[Azure OpenAI] AI生成URLを検証中...');
+        aiResponse.actions = UrlValidator.validateActions(aiResponse.actions);
+        console.log(`[Azure OpenAI] URL検証完了: ${aiResponse.actions.length}個のアクションを保持`);
 
         console.log('質問回答を含むホーム画面生成成功:', aiResponse);
         console.log('enrichedContext:', aiResponse.enrichedContext);
@@ -105,6 +116,11 @@ export class AzureOpenAIClient {
         if (!aiResponse.title || !aiResponse.content || !aiResponse.actions) {
             throw new Error('APIレスポンスの形式が無効です');
         }
+
+        // URL検証とサニタイゼーション
+        console.log('[Azure OpenAI] 修正後のURLを検証中...');
+        aiResponse.actions = UrlValidator.validateActions(aiResponse.actions);
+        console.log(`[Azure OpenAI] URL検証完了: ${aiResponse.actions.length}個のアクションを保持`);
 
         console.log('AI応答の解析成功:', aiResponse);
         return aiResponse;

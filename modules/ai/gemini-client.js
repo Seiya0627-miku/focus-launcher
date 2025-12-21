@@ -2,6 +2,7 @@
 // すべてのGemini API呼び出しを一元管理
 
 import { API_CONFIG } from '../../config/api-config.js';
+import { UrlValidator } from '../utils/url-validator.js';
 
 export class GeminiClient {
     /**
@@ -52,6 +53,11 @@ export class GeminiClient {
             console.log(`アクション数が5つを超えていますが、必要なため保持します: ${aiResponse.actions.length}個`);
         }
 
+        // URL検証とサニタイゼーション
+        console.log('[Gemini] AI生成URLを検証中...');
+        aiResponse.actions = UrlValidator.validateActions(aiResponse.actions);
+        console.log(`[Gemini] URL検証完了: ${aiResponse.actions.length}個のアクションを保持`);
+
         return aiResponse;
     }
 
@@ -100,6 +106,11 @@ export class GeminiClient {
         if (!aiResponse.title || !aiResponse.content || !aiResponse.actions) {
             throw new Error('APIレスポンスの形式が無効です');
         }
+
+        // URL検証とサニタイゼーション
+        console.log('[Gemini] 修正後のURLを検証中...');
+        aiResponse.actions = UrlValidator.validateActions(aiResponse.actions);
+        console.log(`[Gemini] URL検証完了: ${aiResponse.actions.length}個のアクションを保持`);
 
         console.log('AI応答の解析成功:', aiResponse);
         return aiResponse;
