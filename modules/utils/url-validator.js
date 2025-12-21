@@ -166,9 +166,10 @@ export class UrlValidator {
      * AI生成URLを検証し、必要に応じてサニタイゼーションを行う
      * @param {string} url - 検証するURL
      * @param {string} title - ツールのタイトル（ログ用）
+     * @param {boolean} skipSanitize - サニタイズをスキップするか（searchKeyword生成URLの場合true）
      * @returns {Object} { url: string, isValid: boolean, error: string|null }
      */
-    static validateAIGeneratedURL(url, title = '') {
+    static validateAIGeneratedURL(url, title = '', skipSanitize = false) {
         if (!url || typeof url !== 'string') {
             console.warn(`[URL検証] 無効なURL（空またはstring以外）: ${title}`);
             return {
@@ -198,6 +199,17 @@ export class UrlValidator {
             const invalidPatternCheck = this.checkInvalidTravelSitePatterns(urlObj, url, title);
             if (invalidPatternCheck) {
                 return invalidPatternCheck;
+            }
+
+            // searchKeywordで生成されたURLの場合はサニタイズをスキップ
+            // （既にencodeURIComponent()で正しくエンコード済みのため）
+            if (skipSanitize) {
+                console.log(`[URL検証] searchKeyword生成URL、サニタイズスキップ: ${title}`);
+                return {
+                    url: url,
+                    isValid: true,
+                    error: null
+                };
             }
 
             // URLエンコーディングの検証（不正な文字が含まれていないか）
@@ -364,21 +376,30 @@ export class UrlValidator {
         }
 
         return actions.map(action => {
+            console.log(`[URL検証] アクション処理開始: ${action.title}`);
+            console.log(`  元のURL: ${action.url}`);
+            console.log(`  searchKeyword: "${action.searchKeyword}"`);
+            console.log(`  searchKeywordの型: ${typeof action.searchKeyword}`);
+
             let finalUrl = action.url;
+            let isSearchUrl = false;  // searchKeywordで生成されたURLかどうか
 
             // searchKeywordがある場合、検索URLを生成
             if (action.searchKeyword && action.searchKeyword.trim()) {
                 const searchUrl = this.buildSearchURL(action.url, action.searchKeyword, action.title);
                 if (searchUrl) {
                     finalUrl = searchUrl;
+                    isSearchUrl = true;  // 検索URLフラグを立てる
                     console.log(`[URL検証] 検索URLを生成: ${action.title}`);
                     console.log(`  キーワード: ${action.searchKeyword}`);
-                    console.log(`  URL: ${finalUrl}`);
+                    console.log(`  生成されたURL: ${finalUrl}`);
                 }
+            } else {
+                console.log(`[URL検証] searchKeywordなし、元のURLを使用: ${action.title}`);
             }
 
-            // URL検証
-            const result = this.validateAIGeneratedURL(finalUrl, action.title);
+            // URL検証（searchKeywordで生成されたURLの場合はsanitizeをスキップ）
+            const result = this.validateAIGeneratedURL(finalUrl, action.title, isSearchUrl);
 
             if (result.error) {
                 console.warn(`[URL検証] アクション "${action.title}" のURL検証で問題: ${result.error}`);
