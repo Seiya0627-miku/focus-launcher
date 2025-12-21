@@ -117,6 +117,30 @@ body {
     color: #475569;
 }
 
+.end-workflow-button {
+    width: 100%;
+    background: linear-gradient(135deg, #E91E63, #C2185B);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(233, 30, 99, 0.3);
+}
+
+.end-workflow-button:hover {
+    background: linear-gradient(135deg, #F06292, #E91E63);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.4);
+}
+
+.end-workflow-button:active {
+    transform: translateY(0);
+}
+
 .hidden {
     display: none !important;
 }
@@ -156,7 +180,7 @@ body {
 
 .danger-button {
     width: 100%;
-    background: #ef4444;
+    background: #9ca3af;
     color: white;
     border: none;
     padding: 10px 20px;
@@ -168,9 +192,9 @@ body {
 }
 
 .danger-button:hover {
-    background: #dc2626;
+    background: #6b7280;
     transform: translateY(-1px);
-    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 5px 15px rgba(107, 114, 128, 0.3);
 }
 
 .danger-button:active {
@@ -211,7 +235,7 @@ body {
 
 .export-button {
     width: 100%;
-    background: #10b981;
+    background: #9ca3af;
     color: white;
     border: none;
     padding: 10px 20px;
@@ -224,7 +248,7 @@ body {
 }
 
 .export-button:hover {
-    background: #059669;
+    background: #6b7280;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
 }

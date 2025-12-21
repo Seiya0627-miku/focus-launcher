@@ -71,6 +71,40 @@ export class MessageToast {
     }
 
     /**
+     * 情報メッセージを表示
+     * @param {string} message - 表示するメッセージ
+     * @param {number} duration - 表示時間（ミリ秒、デフォルト3000ms）
+     */
+    static info(message, duration = 3000) {
+        const toastDiv = document.createElement('div');
+        toastDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #2196F3;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-weight: 500;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            animation: slideIn 0.3s ease;
+        `;
+        toastDiv.textContent = message;
+        document.body.appendChild(toastDiv);
+
+        setTimeout(() => {
+            toastDiv.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => {
+                if (toastDiv.parentNode) {
+                    toastDiv.parentNode.removeChild(toastDiv);
+                }
+            }, 300);
+        }, duration);
+    }
+
+    /**
      * 警告メッセージを表示（フォールバック用）
      * @param {string} message - 表示するメッセージ
      * @param {number} duration - 表示時間（ミリ秒、デフォルト5000ms）

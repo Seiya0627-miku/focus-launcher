@@ -30,42 +30,63 @@
         <div id="home-screen" class="home-container hidden">
             <div class="header">
                 <h2 id="current-workflow-title">作業中</h2>
-                <button id="end-workflow" class="secondary-button">
-                    ワークフローを終了
+                <button id="end-workflow" class="end-workflow-button">
+                    新しい作業を始める
                 </button>
             </div>
-            
+
+            <!-- Google検索バー -->
+            <div class="google-search-bar">
+                <form id="google-search-form">
+                    <input
+                        type="text"
+                        id="google-search-input"
+                        placeholder="Google検索（ここでの検索はログに記録されます）"
+                        autocomplete="off"
+                    />
+                    <button type="submit" class="search-button">検索</button>
+                </form>
+            </div>
+
             <div class="content-area">
-                <div id="ai-generated-content" class="ai-content">
-                    <!-- AIが生成したコンテンツがここに表示される -->
-                </div>
-                
+                <!-- 提案ページセクション -->
                 <div class="quick-actions">
-                    <h3>よく使うツール</h3>
+                    <h3>提案ページ</h3>
                     <div id="quick-actions-grid" class="actions-grid">
                         <!-- 動的に生成されるアクション -->
                     </div>
                 </div>
 
-                <!-- ユーザー修正要求セクション -->
-                <div class="user-feedback-section">
-                    <h3>📝 ツールの追加・修正</h3>
-                    <p>必要なツールが不足している場合や、追加したいツールがあれば教えてください。</p>
-                    <div class="feedback-input-container">
-                        <textarea 
-                            id="feedback-textarea" 
-                            placeholder="例：Google Slidesを追加して、プレゼンテーション作成をサポートしてほしい"
-                            rows="2"
-                        ></textarea>
-                        <div class="feedback-buttons">
+                <!-- 2カラムセクション：追加質問と修正要求 -->
+                <div class="two-column-section">
+                    <!-- 追加質問ブロック -->
+                    <div id="clarification-section" class="clarification-section">
+                        <!-- JavaScriptで動的に生成される -->
+                    </div>
+
+                    <!-- ユーザー修正要求ブロック -->
+                    <div class="user-feedback-section">
+                        <h3>ツールの追加・修正</h3>
+                        <p>必要なツールが不足している場合や、追加したいツールがあれば教えてください。</p>
+                        <div class="feedback-input-container">
+                            <textarea
+                                id="feedback-textarea"
+                                placeholder="例：Google Slidesを追加して、プレゼンテーション作成をサポートしてほしい"
+                                rows="2"
+                            ></textarea>
                             <button id="submit-feedback" class="primary-button">
                                 修正要求を送信
                             </button>
-                            <button id="end-workflow-feedback" class="secondary-button">
-                                ワークフローを終了
-                            </button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- ローディングオーバーレイ -->
+            <div id="loading-overlay" class="loading-overlay hidden">
+                <div class="loading-overlay-content">
+                    <div class="spinner"></div>
+                    <p>更新中...</p>
                 </div>
             </div>
         </div>

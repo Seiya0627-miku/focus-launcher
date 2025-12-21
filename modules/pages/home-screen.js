@@ -5,19 +5,60 @@ export class HomeScreen {
      * ホーム画面を更新
      * @param {Object} workflow - ワークフロー情報
      * @param {Function} onActionRemove - アクション削除時のコールバック
+     * @param {Function} onClarificationSubmit - 質問回答送信時のコールバック
      */
-    static async update(workflow, onActionRemove) {
+    static async update(workflow, onActionRemove, onClarificationSubmit = null) {
         if (!workflow || !workflow.aiContent) return;
 
         // タイトルを更新
         document.getElementById('current-workflow-title').textContent = workflow.aiContent.title;
 
-        // AI生成コンテンツを更新
-        const aiContent = document.getElementById('ai-generated-content');
-        aiContent.innerHTML = workflow.aiContent.content;
+        // 追加質問セクションを更新
+        const clarificationSection = document.getElementById('clarification-section');
+
+        // 質問がある場合
+        if (workflow.aiContent.clarificationQuestion) {
+            clarificationSection.className = 'clarification-section has-question';
+            clarificationSection.innerHTML = `
+                <h3>追加の質問があります</h3>
+                <p>${workflow.aiContent.clarificationQuestion}</p>
+                <div class="answer-input-container">
+                    <textarea
+                        id="clarification-answer-input"
+                        placeholder="回答を入力してください"
+                        rows="2"
+                    ></textarea>
+                    <button id="submit-clarification-btn">
+                        回答を送信
+                    </button>
+                </div>
+            `;
+
+            // 回答送信ボタンのイベントリスナーを追加
+            if (onClarificationSubmit) {
+                const submitBtn = document.getElementById('submit-clarification-btn');
+                const answerInput = document.getElementById('clarification-answer-input');
+
+                submitBtn.addEventListener('click', () => {
+                    const answer = answerInput.value.trim();
+                    if (answer) {
+                        onClarificationSubmit(workflow.aiContent.clarificationQuestion, answer);
+                    } else {
+                        alert('回答を入力してください');
+                    }
+                });
+            }
+        } else {
+            // 質問がない場合
+            clarificationSection.className = 'clarification-section';
+            clarificationSection.innerHTML = `
+                <h3>追加の質問</h3>
+                <div class="no-question-message">追加の質問はありません</div>
+            `;
+        }
 
         // クイックアクションを更新
-        await HomeScreenUI.updateQuickActions(workflow.aiContent.actions, onActionRemove);
+        await HomeScreen.updateQuickActions(workflow.aiContent.actions, onActionRemove);
     }
 
     /**
@@ -35,7 +76,7 @@ export class HomeScreen {
             actionCard.className = 'action-card';
 
             // ファビコンを取得
-            const faviconUrl = await HomeScreenUI.getFavicon(action.url);
+            const faviconUrl = await HomeScreen.getFavicon(action.url);
 
             actionCard.innerHTML = `
                 <button class="remove-button" data-index="${i}" title="このアプリを削除">✕</button>
@@ -63,7 +104,7 @@ export class HomeScreen {
                 if (e.target.classList.contains('remove-button')) {
                     return;
                 }
-                window.open(action.url, '_blank');
+                window.location.href = action.url;
             });
 
             actionsGrid.appendChild(actionCard);
