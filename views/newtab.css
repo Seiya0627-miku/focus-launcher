@@ -508,4 +508,61 @@ body {
 /* 追加: 万一footer要素が存在しても新しいタブでは非表示にする */
 footer {
     display: none !important;
+}
+
+/* Google検索バー */
+.google-search-bar {
+    margin: 0 auto 30px auto;
+    max-width: 700px;
+    padding: 0 20px;
+}
+
+#google-search-form {
+    display: flex;
+    gap: 10px;
+    background: white;
+    border-radius: 50px;
+    padding: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+#google-search-form:focus-within {
+    box-shadow: 0 6px 30px rgba(102, 126, 234, 0.3);
+}
+
+#google-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 12px 20px;
+    font-size: 1rem;
+    background: transparent;
+    font-family: inherit;
+}
+
+#google-search-input::placeholder {
+    color: #999;
+}
+
+.search-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    white-space: nowrap;
+}
+
+.search-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.search-button:active {
+    transform: translateY(0);
 } 
