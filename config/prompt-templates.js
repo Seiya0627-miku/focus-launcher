@@ -61,18 +61,13 @@ export const PROMPT_TEMPLATES = {
 
 注意事項：
 - 作業目的に関連する実用的なツールやサイトを提案
-- 研究系の作業には学術サイトを、ビジネス系には実用的なツールを
-- ドキュメント作成にはGoogle Docs、Google Slides、Google Sheetsを優先的に提案
 - 学術系の作業にはOverleafも含める
-- 論文を広く調べる必要がある場合はPaperDive（https://www.paperdive.app/）を必ず含める
-- Google Driveは常に含める（ファイル管理のため）
 - 各アクションは具体的で実用的なものにする
 - アイコンは絵文字を使用（例：📚、🔬、✈️、📧）
 - **【重要】アクション数の厳格な制限**：
-  * 必要最小限のページのみ提案してください
+  * 作業に必要と思われるページだけ提案してください
   * {bookmarkCount}個のブックマークが既に存在する場合を除き、**必ず5個以下**にしてください
-  * 6個以上は絶対に提案しないでください
-  * 本当に必要なツールだけを厳選してください
+  * ページを必ず1つ以上提案してください
 - Google Workspaceツール（Docs、Slides、Sheets、Drive、Mailなど）は以下のURL形式で統一してください：
   * Google Docs: https://docs.google.com
   * Google Slides: https://slides.google.com
@@ -84,7 +79,7 @@ export const PROMPT_TEMPLATES = {
   * 「国内と海外、どちらの旅行ですか？」
   * 「どのプログラミング言語を学習しますか？（例：Python、JavaScript、Javaなど）」
   * 「どの地域への出張ですか？（例：国内、アジア、欧米など）」
-  * 「どの分野の文献を調べますか？（例：医学、工学、人文科学など）」
+  * 「移動手段はなんですか？（例：飛行機、新幹線、車など）」
 - 必ず有効なJSON形式で回答し、マークダウンのコードブロック記号は使用しない
 `,
 
