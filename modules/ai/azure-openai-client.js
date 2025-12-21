@@ -93,6 +93,8 @@ export class AzureOpenAIClient {
      */
     static async processFeedback(prompt) {
         console.log('Azure OpenAI APIに修正要求を送信中...');
+        console.log('[Azure OpenAI] プロンプト長:', prompt.length, '文字');
+        console.log('[Azure OpenAI] プロンプト内容:', prompt);
 
         const messages = [
             {
@@ -106,8 +108,15 @@ export class AzureOpenAIClient {
         ];
 
         const response = await AzureOpenAIClient.callAPI(messages);
+
+        // デバッグ: レスポンス全体をログ出力
+        console.log('[Azure OpenAI] API完全レスポンス:', JSON.stringify(response, null, 2));
+        console.log('[Azure OpenAI] finish_reason:', response.choices[0].finish_reason);
+        console.log('[Azure OpenAI] usage:', response.usage);
+
         const aiText = response.choices[0].message.content;
         console.log('AIからの応答:', aiText);
+        console.log('AIからの応答の長さ:', aiText ? aiText.length : 0);
 
         // JSONレスポンスを解析
         const aiResponse = AzureOpenAIClient.parseResponse(aiText);
