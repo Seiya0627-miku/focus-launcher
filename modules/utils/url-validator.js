@@ -204,7 +204,6 @@ export class UrlValidator {
             // searchKeywordで生成されたURLの場合はサニタイズをスキップ
             // （既にencodeURIComponent()で正しくエンコード済みのため）
             if (skipSanitize) {
-                console.log(`[URL検証] searchKeyword生成URL、サニタイズスキップ: ${title}`);
                 return {
                     url: url,
                     isValid: true,
@@ -215,9 +214,6 @@ export class UrlValidator {
             // URLエンコーディングの検証（不正な文字が含まれていないか）
             const sanitized = this.sanitizeURL(url);
             if (sanitized !== url) {
-                console.log(`[URL検証] URLをサニタイズしました: ${title}`);
-                console.log(`  元: ${url}`);
-                console.log(`  後: ${sanitized}`);
                 return {
                     url: sanitized,
                     isValid: true,
@@ -376,11 +372,6 @@ export class UrlValidator {
         }
 
         return actions.map(action => {
-            console.log(`[URL検証] アクション処理開始: ${action.title}`);
-            console.log(`  元のURL: ${action.url}`);
-            console.log(`  searchKeyword: "${action.searchKeyword}"`);
-            console.log(`  searchKeywordの型: ${typeof action.searchKeyword}`);
-
             let finalUrl = action.url;
             let isSearchUrl = false;  // searchKeywordで生成されたURLかどうか
 
@@ -390,12 +381,8 @@ export class UrlValidator {
                 if (searchUrl) {
                     finalUrl = searchUrl;
                     isSearchUrl = true;  // 検索URLフラグを立てる
-                    console.log(`[URL検証] 検索URLを生成: ${action.title}`);
-                    console.log(`  キーワード: ${action.searchKeyword}`);
-                    console.log(`  生成されたURL: ${finalUrl}`);
+                    console.log(`[URL検証] "${action.title}": searchKeyword適用`);
                 }
-            } else {
-                console.log(`[URL検証] searchKeywordなし、元のURLを使用: ${action.title}`);
             }
 
             // URL検証（searchKeywordで生成されたURLの場合はsanitizeをスキップ）
@@ -427,14 +414,11 @@ export class UrlValidator {
             // 1. サイト別の検索URLテンプレートを探す（優先）
             for (const [domain, template] of Object.entries(this.SEARCH_URL_TEMPLATES)) {
                 if (hostname.includes(domain)) {
-                    const searchUrl = template(searchKeyword);
-                    console.log(`[URL検証] テンプレートマッチ: ${domain}`);
-                    return searchUrl;
+                    return template(searchKeyword);
                 }
             }
 
             // 2. テンプレートが見つからない場合、汎用的な検索パラメータを試す
-            console.log(`[URL検証] テンプレートなし、汎用パラメータを試行: ${hostname}`);
             return this.tryGenericSearchParams(urlObj, searchKeyword, title);
 
         } catch (e) {
@@ -456,14 +440,12 @@ export class UrlValidator {
 
         for (const param of this.GENERIC_SEARCH_PARAMS) {
             const searchUrl = `${urlObj.origin}${urlObj.pathname}?${param}=${encodeURIComponent(searchKeyword)}`;
-            console.log(`[URL検証] 汎用パラメータ試行: ${param} → ${searchUrl}`);
             // 最初の汎用パラメータ（'q'）を使用
             // 実際にどのパラメータが有効かはサイト依存だが、'q'が最も一般的
             return searchUrl;
         }
 
         // 汎用パラメータでも生成できない場合はnull
-        console.log(`[URL検証] 検索URL生成不可: ${title}`);
         return null;
     }
 }
