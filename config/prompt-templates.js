@@ -53,7 +53,8 @@ export const PROMPT_TEMPLATES = {
             "title": "ツール名",
             "description": "説明",
             "url": "URL",
-            "icon": "絵文字またはアイコン"
+            "icon": "絵文字またはアイコン",
+            "searchKeyword": "検索キーワード（オプション、予約サイトなどで使用）"
         }
     ],
     "clarificationQuestion": "追加で聞くべき質問（曖昧でない場合はnull）"
@@ -80,7 +81,23 @@ export const PROMPT_TEMPLATES = {
     - PaperDive: https://www.paperdive.app/?q=deep+learning
   * 例：「金沢に温泉旅行に行きたい」の場合
     - Google検索のアクション: {"title": "Google検索", "url": "https://www.google.com/search?q=金沢+温泉+旅館", "icon": "🔍"}
-    - 宿泊予約のアクション: {"title": "じゃらん", "url": "https://www.jalan.net/travel/kanazawa/", "icon": "🏨"}
+  * **【重要】旅行予約サイトの注意事項**：
+    - じゃらん: トップページURLに検索キーワードを含めてください
+      例：{"title": "じゃらん", "url": "https://www.jalan.net/", "searchKeyword": "金沢 温泉", "icon": "🏨"}
+    - 楽天トラベル: トップページURLに検索キーワードを含めてください
+      例：{"title": "楽天トラベル", "url": "https://travel.rakuten.co.jp/", "searchKeyword": "金沢 温泉", "icon": "🏨"}
+    - searchKeywordには作業目的から抽出した適切なキーワードを設定してください
+    - 電車・航空券予約サイトの場合は目的地のみ（例：「金沢」）
+    - 宿泊予約サイトの場合は場所+宿泊種類（例：「金沢 温泉」「東京 ホテル」）
+    - **searchKeyword対応サイト一覧**（以下のサイトは検索URLを自動生成可能）：
+      【宿泊予約】じゃらん、楽天トラベル、Booking.com、Agoda、Airbnb、Hotels.com、Expedia、Trivago、一休
+      【航空券・交通】Skyscanner、ANA、JAL、えきねっと、ハイパーダイア
+      【ショッピング】Amazon、楽天市場、Yahoo!ショッピング、メルカリ、価格.com
+      【検索エンジン】Google、Yahoo! JAPAN、Bing
+      【学術・専門】Google Scholar、PaperDive、ResearchGate、PubMed
+      【動画・SNS】YouTube、ニコニコ動画、Twitter/X
+      【その他】Wikipedia、食べログ、ぐるなび、ホットペッパー
+    - その他のサイトでも一般的な検索パラメータ（q, query, keyword など）を自動で試行
 - Google Workspaceツール（Docs、Slides、Sheets、Drive、Mailなど）は以下のURL形式で統一してください：
   * Google Docs: https://docs.google.com
   * Google Slides: https://slides.google.com
@@ -133,6 +150,20 @@ export const PROMPT_TEMPLATES = {
     - Google Scholar: https://scholar.google.com/scholar?q=機械学習+深層学習
     - Amazon: https://www.amazon.co.jp/s?k=ノートパソコン+軽量
     - YouTube: https://www.youtube.com/results?search_query=JavaScript+チュートリアル
+  * **【重要】旅行予約サイトの注意事項**：
+    - じゃらん: トップページURLとsearchKeywordを設定 → {"url": "https://www.jalan.net/", "searchKeyword": "金沢 温泉"}
+    - 楽天トラベル: トップページURLとsearchKeywordを設定 → {"url": "https://travel.rakuten.co.jp/", "searchKeyword": "金沢 温泉"}
+    - 電車・航空券予約サイトの場合は目的地のみ（例：「金沢」）
+    - 宿泊予約サイトの場合は場所+宿泊種類（例：「金沢 温泉」「東京 ホテル」）
+    - **searchKeyword対応サイト一覧**（以下のサイトは検索URLを自動生成可能）：
+      【宿泊予約】じゃらん、楽天トラベル、Booking.com、Agoda、Airbnb、Hotels.com、Expedia、Trivago、一休
+      【航空券・交通】Skyscanner、ANA、JAL、えきねっと、ハイパーダイア
+      【ショッピング】Amazon、楽天市場、Yahoo!ショッピング、メルカリ、価格.com
+      【検索エンジン】Google、Yahoo! JAPAN、Bing
+      【学術・専門】Google Scholar、PaperDive、ResearchGate、PubMed
+      【動画・SNS】YouTube、ニコニコ動画、Twitter/X
+      【その他】Wikipedia、食べログ、ぐるなび、ホットペッパー
+    - その他のサイトでも一般的な検索パラメータ（q, query, keyword など）を自動で試行
 - Google Workspaceツール（Docs、Slides、Sheets、Drive、Mailなど）は以下のURL形式で統一してください：
   * Google Docs: https://docs.google.com
   * Google Slides: https://slides.google.com
@@ -179,7 +210,8 @@ export const PROMPT_TEMPLATES = {
             "title": "ツール名",
             "description": "説明",
             "url": "URL",
-            "icon": "絵文字またはアイコン"
+            "icon": "絵文字またはアイコン",
+            "searchKeyword": "検索キーワード（オプション、予約サイトなどで使用）"
         }
     ],
     "clarificationQuestion": "さらに聞くべき質問（なければnull）",
@@ -208,6 +240,21 @@ export const PROMPT_TEMPLATES = {
   * 例：「海外旅行の計画」+「3泊4日のフランス旅行」の場合
     - Google検索のアクション: {"title": "Google検索", "url": "https://www.google.com/search?q=フランス+旅行+3泊4日+モデルコース", "icon": "🔍"}
     - 航空券予約のアクション: {"title": "スカイスキャナー", "url": "https://www.skyscanner.jp/flights-to/fr/cheap-flights-to-france.html", "icon": "✈️"}
+  * **【重要】旅行予約サイトの注意事項**：
+    - じゃらん: トップページURLとsearchKeywordを設定 → {"url": "https://www.jalan.net/", "searchKeyword": "金沢 温泉"}
+    - 楽天トラベル: トップページURLとsearchKeywordを設定 → {"url": "https://travel.rakuten.co.jp/", "searchKeyword": "金沢 温泉"}
+    - searchKeywordには作業目的から抽出した適切なキーワードを設定してください
+    - 電車・航空券予約サイトの場合は目的地のみ（例：「金沢」）
+    - 宿泊予約サイトの場合は場所+宿泊種類（例：「金沢 温泉」「東京 ホテル」）
+    - **searchKeyword対応サイト一覧**（以下のサイトは検索URLを自動生成可能）：
+      【宿泊予約】じゃらん、楽天トラベル、Booking.com、Agoda、Airbnb、Hotels.com、Expedia、Trivago、一休
+      【航空券・交通】Skyscanner、ANA、JAL、えきねっと、ハイパーダイア
+      【ショッピング】Amazon、楽天市場、Yahoo!ショッピング、メルカリ、価格.com
+      【検索エンジン】Google、Yahoo! JAPAN、Bing
+      【学術・専門】Google Scholar、PaperDive、ResearchGate、PubMed
+      【動画・SNS】YouTube、ニコニコ動画、Twitter/X
+      【その他】Wikipedia、食べログ、ぐるなび、ホットペッパー
+    - その他のサイトでも一般的な検索パラメータ（q, query, keyword など）を自動で試行
 - Google Workspaceツール（Docs、Slides、Sheets、Drive、Mailなど）は以下のURL形式で統一してください：
   * Google Docs: https://docs.google.com
   * Google Slides: https://slides.google.com
