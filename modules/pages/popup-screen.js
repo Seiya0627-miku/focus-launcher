@@ -21,7 +21,7 @@ export class PopupScreen {
             this.showReflectionScreen();
         });
 
-        // ブックマークボタン
+        // 保存ボタン
         document.getElementById("bookmark-current-page").addEventListener("click", async () => {
             await this.bookmarkCurrentPage();
         });
@@ -141,13 +141,13 @@ export class PopupScreen {
             const currentTab = tabs[0];
 
             if (!currentTab || !currentTab.url) {
-                alert('ブックマークできるページがありません');
+                alert('保存できるページがありません');
                 return;
             }
 
             // 無効なURLをチェック（新しいモジュールを使用）
             if (!UrlValidator.isBookmarkable(currentTab.url)) {
-                alert('このページはブックマークできません');
+                alert('このページは保存できません');
                 return;
             }
 
@@ -155,11 +155,11 @@ export class PopupScreen {
             // if (currentTab.url.startsWith('chrome://') ||
             //     currentTab.url.startsWith('chrome-extension://') ||
             //     currentTab.url.startsWith('about:')) {
-            //     alert('このページはブックマークできません');
+            //     alert('このページは保存できません');
             //     return;
             // }
 
-            // ブックマークデータを作成
+            // 保存データを作成
             const bookmark = {
                 id: `bookmark_${Date.now()}`,
                 url: currentTab.url,
@@ -168,15 +168,15 @@ export class PopupScreen {
                 createdAt: new Date().toISOString()
             };
 
-            // ブックマークを保存
+            // ページを保存
             await this.saveBookmark(bookmark);
 
             // 成功メッセージ
             this.showBookmarkSuccessMessage(bookmark.title);
 
         } catch (error) {
-            console.error('ブックマークの保存に失敗しました:', error);
-            alert('ブックマークの保存に失敗しました');
+            console.error('ページの保存に失敗しました:', error);
+            alert('ページの保存に失敗しました');
         }
     }
 
@@ -191,7 +191,7 @@ export class PopupScreen {
             );
 
             if (isDuplicate) {
-                alert('同じ目的でこのページは既にブックマークされています');
+                alert('同じ目的でこのページは既に保存されています');
                 return;
             }
 
@@ -203,22 +203,61 @@ export class PopupScreen {
             const logData = Logger.createBookmarkLog(bookmark.id, bookmark.url, bookmark.purpose);
             await Logger.save('bookmark_created', logData);
 
-            // 既存のコードは残す（念のため）
-            // await chrome.runtime.sendMessage({
-            //     action: 'saveLog',
-            //     eventType: 'bookmark_created',
-            //     data: {
-            //         bookmarkId: bookmark.id,
-            //         url: bookmark.url,
-            //         purpose: bookmark.purpose
-            //     }
-            // });
+            // 現在のワークフローのアクションに即座に追加
+            await this.addBookmarkToCurrentWorkflow(bookmark);
 
-            console.log('ブックマークを保存しました:', bookmark.title);
+            console.log('ページを保存しました:', bookmark.title);
 
         } catch (error) {
-            console.error('ブックマーク保存エラー:', error);
+            console.error('ページ保存エラー:', error);
             throw error;
+        }
+    }
+
+    // 保存したページを現在のワークフローのアクションに追加
+    async addBookmarkToCurrentWorkflow(bookmark) {
+        try {
+            const result = await chrome.storage.local.get(['currentWorkflow']);
+            const currentWorkflow = result.currentWorkflow;
+
+            if (!currentWorkflow || !currentWorkflow.aiContent) {
+                console.log('[ページ追加] ワークフローが存在しないためスキップ');
+                return;
+            }
+
+            // 保存したページをアクション形式に変換
+            const newAction = {
+                title: bookmark.title,
+                description: `保存したページ: ${bookmark.purpose}`,
+                url: bookmark.url,
+                icon: '🔖'
+            };
+
+            // アクション配列の最後に追加
+            if (!currentWorkflow.aiContent.actions) {
+                currentWorkflow.aiContent.actions = [];
+            }
+            currentWorkflow.aiContent.actions.push(newAction);
+
+            // 更新したワークフローを保存
+            await chrome.storage.local.set({ currentWorkflow: currentWorkflow });
+
+            console.log('[ページ追加] アクションに追加しました:', bookmark.title);
+
+            // newtab.jsに更新通知を送信（全てのタブに）
+            const tabs = await chrome.tabs.query({});
+            for (const tab of tabs) {
+                try {
+                    await chrome.tabs.sendMessage(tab.id, {
+                        action: 'refreshHomeScreen'
+                    });
+                } catch (e) {
+                    // タブがnewtabでない場合は無視
+                }
+            }
+
+        } catch (error) {
+            console.error('[ページ追加] エラー:', error);
         }
     }
 
@@ -227,7 +266,7 @@ export class PopupScreen {
         const statusText = document.getElementById('status-text');
         const originalText = statusText.textContent;
 
-        statusText.textContent = `「${title}」をブックマークしました`;
+        statusText.textContent = `「${title}」を保存しました`;
         statusText.style.color = '#ffffff';
 
         // 2秒後に元に戻す

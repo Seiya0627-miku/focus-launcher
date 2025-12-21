@@ -57,11 +57,6 @@ class FocusLauncher {
             this.submitFeedback();
         });
 
-        // 修正要求セクションのワークフロー終了ボタン
-        document.getElementById('end-workflow-feedback').addEventListener('click', () => {
-            this.endWorkflow();
-        });
-
         // Enterキーでワークフロー開始
         document.getElementById('workflow-textarea').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && e.ctrlKey) {
@@ -561,7 +556,35 @@ class FocusLauncher {
             if (request.action === 'reloadPage') {
                 window.location.reload();
             }
+            if (request.action === 'refreshHomeScreen') {
+                // 保存したページが追加されたときにホーム画面を更新
+                this.refreshHomeScreenDisplay();
+            }
         });
+    }
+
+    // ホーム画面の表示を更新
+    async refreshHomeScreenDisplay() {
+        try {
+            console.log('[ホーム画面更新] 保存したページの追加を反映中...');
+
+            // 最新のワークフローを取得
+            const result = await chrome.storage.local.get(['currentWorkflow']);
+            if (result.currentWorkflow && result.currentWorkflow.aiContent) {
+                this.currentWorkflow = result.currentWorkflow;
+
+                // ホーム画面を再描画
+                await HomeScreen.update(
+                    this.currentWorkflow,
+                    (index) => this.removeAction(index),
+                    (question, answer) => this.handleClarificationAnswer(question, answer)
+                );
+
+                console.log('[ホーム画面更新] 完了');
+            }
+        } catch (error) {
+            console.error('[ホーム画面更新] エラー:', error);
+        }
     }
 
     async checkOverlay() {

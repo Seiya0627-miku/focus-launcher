@@ -178,7 +178,7 @@
                 </div>
                 
                 <div class="section">
-                    <div class="section-header">🔖 ブックマーク</div>
+                    <div class="section-header">🔖 保存したページ</div>
                     <div class="section-content">
                         <table class="data-table" id="bookmarks-table">
                             <thead>
@@ -190,7 +190,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- ブックマークデータがここに表示される -->
+                                <!-- 保存したページデータがここに表示される -->
                             </tbody>
                         </table>
                     </div>
@@ -261,7 +261,7 @@
                 const stats = {
                     '実験ID': this.data.experimentId || '未設定',
                     'ログ数': this.data.logs?.length || 0,
-                    'ブックマーク数': this.data.bookmarks?.length || 0,
+                    '保存したページ数': this.data.bookmarks?.length || 0,
                     'ワークフロー数': this.data.currentWorkflow ? 1 : 0
                 };
                 
@@ -310,7 +310,7 @@
                 const bookmarksTable = document.getElementById('bookmarks-table').querySelector('tbody');
                 
                 if (!this.data.bookmarks || this.data.bookmarks.length === 0) {
-                    bookmarksTable.innerHTML = '<tr><td colspan="4">ブックマークデータがありません</td></tr>';
+                    bookmarksTable.innerHTML = '<tr><td colspan="4">保存したページデータがありません</td></tr>';
                     return;
                 }
                 

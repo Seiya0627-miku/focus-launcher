@@ -17,7 +17,7 @@ export class PromptBuilder {
 
         // ブックマーク情報を追加
         if (bookmarks.length > 0) {
-            let bookmarkContext = '\n\n関連するブックマーク（優先的に活用してください）:\n';
+            let bookmarkContext = '\n\n関連する保存したページ（優先的に活用してください）:\n';
             bookmarks.forEach((bookmark, index) => {
                 bookmarkContext += `${index + 1}. ${bookmark.title}\n`;
                 bookmarkContext += `   URL: ${bookmark.url}\n`;
@@ -64,7 +64,7 @@ export class PromptBuilder {
 
         // ブックマーク情報を追加
         if (bookmarks.length > 0) {
-            let bookmarkContext = '\n\n関連するブックマーク（優先的に活用してください）:\n';
+            let bookmarkContext = '\n\n関連する保存したページ（優先的に活用してください）:\n';
             bookmarks.forEach((bookmark, index) => {
                 bookmarkContext += `${index + 1}. ${bookmark.title}\n`;
                 bookmarkContext += `   URL: ${bookmark.url}\n`;

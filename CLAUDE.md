@@ -64,7 +64,7 @@ Focus Launcherは、研究用PC向けのChrome拡張機能（Manifest V3）で�
 
 **popup.js（ツールバーポップアップ）**
 - ワークフロー状態の表示
-- 現在のページをブックマーク（`bookmarks`配列に保存）
+- 現在のページを保存（`bookmarks`配列に保存）
 - 実験データのエクスポート（JSON形式）
 - データリセット機能
 
@@ -116,7 +116,7 @@ Focus Launcherは、研究用PC向けのChrome拡張機能（Manifest V3）で�
     { title: "Google Scholar", url: "https://scholar.google.com", timestamp: 1705315850000 }
   ],
 
-  // ブックマーク
+  // 保存したページ
   bookmarks: [
     { id: "bookmark_1705315900000", url: "https://...", title: "...", purpose: "研究計画書...", createdAt: "2025-01-15T10:35:00Z" }
   ],
@@ -144,7 +144,7 @@ Focus Launcherは、研究用PC向けのChrome拡張機能（Manifest V3）で�
 ### Gemini API統合
 
 **ホーム画面生成**（newtab.js:667-711）
-- `generateHomeScreen()`でプロンプト作成（ブックマーク情報を含む）
+- `generateHomeScreen()`でプロンプト作成（保存したページ情報を含む）
 - `callGeminiAPI()`でAPI呼び出し
 - レスポンスはJSON形式（title, content, actions）
 - 失敗時は`generateMockAIResponse()`でローカルフォールバック
@@ -168,9 +168,9 @@ Focus Launcherは、研究用PC向けのChrome拡張機能（Manifest V3）で�
 - 新しいタブで意図再確認オーバーレイを表示
 - Gemini APIで過去の目的と現在の目的を比較し、一致すればワークフロー継続
 
-**ブックマーク機能**（popup.js:124-224）
-- ポップアップの「このページをブックマーク」ボタンで現在のページを保存
-- ブックマークは現在のワークフローの目的と紐付け
+**ページ保存機能**（popup.js:124-224）
+- ポップアップの「このページを保存」ボタンで現在のページを保存
+- 保存したページは現在のワークフローの目的と紐付け
 - 次回同じ目的でワークフロー開始時、Gemini APIのプロンプトに含まれる
 
 **ページ評価の反転**（reflection.js:117）

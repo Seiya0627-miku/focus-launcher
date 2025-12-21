@@ -137,6 +137,25 @@ body {
     color: #475569;
 }
 
+.end-workflow-button {
+    background: linear-gradient(135deg, #E91E63, #C2185B);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(233, 30, 99, 0.3);
+}
+
+.end-workflow-button:hover {
+    background: linear-gradient(135deg, #F06292, #E91E63);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.4);
+}
+
 .content-area {
     padding: 30px;
     max-width: 1200px;
@@ -245,12 +264,119 @@ body {
     line-height: 1.4;
 }
 
+/* 2カラムセクション */
+.two-column-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 30px;
+}
+
+/* 追加質問ブロック */
+.clarification-section {
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e1e5e9;
+}
+
+/* 質問がある場合のスタイル（色背景+白文字） */
+.clarification-section.has-question {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+}
+
+.clarification-section.has-question h3 {
+    color: white;
+}
+
+.clarification-section.has-question p {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.clarification-section h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.clarification-section p {
+    font-size: 0.95rem;
+    color: #666;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.clarification-section .no-question-message {
+    font-size: 0.95rem;
+    color: #999;
+    text-align: center;
+    padding: 20px 0;
+}
+
+/* 回答入力エリア */
+.clarification-section .answer-input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.clarification-section textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 60px;
+    transition: border-color 0.3s ease;
+}
+
+/* 質問がある場合のテキストエリアスタイル */
+.clarification-section.has-question textarea {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #333;
+}
+
+.clarification-section.has-question textarea:focus {
+    outline: none;
+    border-color: white;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+}
+
+.clarification-section.has-question textarea::placeholder {
+    color: #999;
+}
+
+.clarification-section.has-question button {
+    background: linear-gradient(135deg, #2be2dc, #1bc8df);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.clarification-section.has-question button:hover {
+    background: linear-gradient(135deg, #4DD0E1, #26C6DA);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(27, 223, 226, 0.4);
+}
+
 /* ユーザー修正要求セクション */
 .user-feedback-section {
     background: white;
     border-radius: 16px;
     padding: 30px;
-    margin-top: 30px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     border: 1px solid #e1e5e9;
     border-left: 4px solid #667eea;
@@ -294,18 +420,11 @@ body {
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.feedback-buttons {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
-}
-
-.feedback-buttons .primary-button,
-.feedback-buttons .secondary-button {
-    flex: 1;
-    min-width: 150px;
+.feedback-input-container .primary-button {
+    width: 100%;
     padding: 12px 20px;
     font-size: 0.95rem;
+    margin-top: 10px;
 }
 
 /* ローディング画面 */
@@ -494,14 +613,9 @@ body {
         gap: 15px;
     }
 
-    .feedback-buttons {
-        flex-direction: column;
-    }
-
-    .feedback-buttons .primary-button,
-    .feedback-buttons .secondary-button {
-        flex: none;
-        width: 100%;
+    .two-column-section {
+        grid-template-columns: 1fr;
+        gap: 20px;
     }
 }
 
@@ -512,7 +626,7 @@ footer {
 
 /* Google検索バー */
 .google-search-bar {
-    margin: 25px auto 30px auto;
+    margin: 25px auto 15px auto;
     max-width: 700px;
     padding: 0 20px;
 }
