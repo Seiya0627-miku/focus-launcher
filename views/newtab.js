@@ -76,6 +76,12 @@ class FocusLauncher {
             }
         });
 
+        // Google検索フォーム送信
+        document.getElementById('google-search-form')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleGoogleSearch();
+        });
+
         // ページのリフレッシュを検知（visibilitychangeイベントを使用）
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
@@ -432,6 +438,37 @@ class FocusLauncher {
             alert('質問回答処理に失敗しました。もう一度お試しください。');
             WorkflowScreen.hideLoadingOverlay();
         }
+    }
+
+    // Google検索を処理してログに記録
+    async handleGoogleSearch() {
+        const searchInput = document.getElementById('google-search-input');
+        const query = searchInput.value.trim();
+
+        if (!query) {
+            return; // 空の検索は無視
+        }
+
+        // 検索クエリをログに記録
+        if (this.currentWorkflow) {
+            if (!this.currentWorkflow.searchQueries) {
+                this.currentWorkflow.searchQueries = [];
+            }
+
+            this.currentWorkflow.searchQueries.push({
+                query: query,
+                timestamp: Date.now()
+            });
+
+            // ストレージに保存
+            await WorkflowManager.update(this.currentWorkflow);
+
+            console.log(`[Google検索] クエリ記録: "${query}"`);
+        }
+
+        // Google検索ページに遷移
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+        window.location.href = searchUrl;
     }
 
     // 振り返り画面に遷移する関数
