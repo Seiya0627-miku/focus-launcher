@@ -138,39 +138,13 @@ export const PROMPT_TEMPLATES = {
 }
 
 注意事項：
-- 既存のツールはurl含めて原則変更しないでください（例：https://slides.google.comをhttps://docs.google.com/presentation/に変更しないでください）
+- 既存のツールはurl含めて原則変更しないでください
 - 削除要求があれば該当ツールを除外してください
 - 追加要求があれば、既存のjsonの後ろに新しいツールの情報を追加してください
 - 重複は避けてください
-- 実用的で関連性の高いツールを提案してください
-- **【重要】URLの具体化**：
-  * 新しく追加するツールについては、検索エンジン、予約サイト、ECサイトなどで、作業目的に関連する具体的な検索クエリやパラメータを含むURLを生成してください
-  * ユーザーがクリックしたときに、直接関連する結果が表示されるようにしてください
-  * 主要サイトのURL例：
-    - Google検索: https://www.google.com/search?q=金沢+温泉+旅館+おすすめ
-    - Google Scholar: https://scholar.google.com/scholar?q=機械学習+深層学習
-    - Amazon: https://www.amazon.co.jp/s?k=ノートパソコン+軽量
-    - YouTube: https://www.youtube.com/results?search_query=JavaScript+チュートリアル
-  * **【重要】旅行予約サイトの注意事項**：
-    - じゃらん: トップページURLとsearchKeywordを設定 → {"url": "https://www.jalan.net/", "searchKeyword": "金沢 温泉"}
-    - 楽天トラベル: トップページURLとsearchKeywordを設定 → {"url": "https://travel.rakuten.co.jp/", "searchKeyword": "金沢 温泉"}
-    - 電車・航空券予約サイトの場合は目的地のみ（例：「金沢」）
-    - 宿泊予約サイトの場合は場所+宿泊種類（例：「金沢 温泉」「東京 ホテル」）
-    - **searchKeyword対応サイト一覧**（以下のサイトは検索URLを自動生成可能）：
-      【宿泊予約】じゃらん、楽天トラベル、Booking.com、Agoda、Airbnb、Hotels.com、Expedia、Trivago、一休
-      【航空券・交通】Skyscanner、ANA、JAL、えきねっと、ハイパーダイア
-      【ショッピング】Amazon、楽天市場、Yahoo!ショッピング、メルカリ、価格.com
-      【検索エンジン】Google、Yahoo! JAPAN、Bing
-      【学術・専門】Google Scholar、PaperDive、ResearchGate、PubMed
-      【動画・SNS】YouTube、ニコニコ動画、Twitter/X
-      【その他】Wikipedia、食べログ、ぐるなび、ホットペッパー
-    - その他のサイトでも一般的な検索パラメータ（q, query, keyword など）を自動で試行
-- Google Workspaceツール（Docs、Slides、Sheets、Drive、Mailなど）は以下のURL形式で統一してください：
-  * Google Docs: https://docs.google.com
-  * Google Slides: https://slides.google.com
-  * その他についても以上と同様にしてください
-- ツール名はそのまま表示し、余計な情報（「構成検討」など）は付けないでください
+- 新しく追加するツールについては、検索URLに検索キーワードを含めるか、searchKeywordフィールドを設定してください
 - title、content には絵文字を使用しないでください（アクションのiconのみ絵文字を使用）
+- 必ず有効なJSON形式で回答し、マークダウンのコードブロック記号は使用しない
 `,
 
     // 質問への回答を含めたホーム画面再生成用プロンプト
