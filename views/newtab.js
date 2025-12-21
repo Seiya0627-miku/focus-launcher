@@ -267,6 +267,14 @@ class FocusLauncher {
         if (AzureOpenAIClient.hasApiKey()) {
             try {
                 const result = await AzureOpenAIClient.processFeedback(prompt);
+
+                // nullが返された場合は「変更なし」
+                if (result === null) {
+                    console.log('Azure OpenAI: 変更不要と判断されました');
+                    MessageToast.info('変更の必要はありませんでした。現在の設定で問題ありません。');
+                    return this.currentWorkflow.aiContent;  // 既存のコンテンツを返す
+                }
+
                 console.log('Azure OpenAI (GPT-5) で修正要求処理成功');
                 MessageToast.success('修正要求が正常に処理されました！');
                 return result;

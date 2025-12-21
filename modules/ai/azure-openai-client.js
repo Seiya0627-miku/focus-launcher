@@ -118,6 +118,12 @@ export class AzureOpenAIClient {
         console.log('AIからの応答:', aiText);
         console.log('AIからの応答の長さ:', aiText ? aiText.length : 0);
 
+        // 空レスポンスの場合は「変更なし」を示すnullを返す
+        if (!aiText || aiText.trim().length === 0) {
+            console.log('[Azure OpenAI] 空レスポンス検出: 変更不要と判断');
+            return null;  // 変更なしを示すnull
+        }
+
         // JSONレスポンスを解析
         const aiResponse = AzureOpenAIClient.parseResponse(aiText);
 
