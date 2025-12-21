@@ -131,7 +131,8 @@ export const PROMPT_TEMPLATES = {
             "title": "ツール名",
             "description": "説明",
             "url": "URL",
-            "icon": "絵文字アイコン"
+            "icon": "絵文字アイコン",
+            "searchKeyword": "検索キーワード（オプション、予約サイトなどで使用）"
         }
     ]
 }
