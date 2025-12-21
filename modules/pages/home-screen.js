@@ -116,7 +116,7 @@ export class HomeScreen {
                 if (e.target.classList.contains('remove-button')) {
                     return;
                 }
-                window.open(action.url, '_blank');
+                window.location.href = action.url;
             });
 
             actionsGrid.appendChild(actionCard);
