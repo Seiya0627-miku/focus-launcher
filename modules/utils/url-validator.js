@@ -89,6 +89,7 @@ export class UrlValidator {
     // 主要サイトのベースURL辞書（フォールバック用）
     static BASE_URLS = {
         'google.com': 'https://www.google.com',
+        'news.google.com': 'https://news.google.com',
         'scholar.google.com': 'https://scholar.google.com',
         'docs.google.com': 'https://docs.google.com',
         'slides.google.com': 'https://slides.google.com',
@@ -137,6 +138,7 @@ export class UrlValidator {
 
         // === 検索エンジン ===
         'google.com': (keyword) => `https://www.google.com/search?q=${encodeURIComponent(keyword)}`,
+        'news.google.com': (keyword) => `https://news.google.com/search?q=${encodeURIComponent(keyword)}`,
         'yahoo.co.jp': (keyword) => `https://search.yahoo.co.jp/search?p=${encodeURIComponent(keyword)}`,
         'bing.com': (keyword) => `https://www.bing.com/search?q=${encodeURIComponent(keyword)}`,
 
@@ -195,8 +197,8 @@ export class UrlValidator {
                 return this.fallbackToBaseURL(url, title, 'ホスト名が見つかりません');
             }
 
-            // じゃらん・楽天トラベルの無効パターン検出
-            const invalidPatternCheck = this.checkInvalidTravelSitePatterns(urlObj, url, title);
+            // 無効パターン検出（じゃらん、楽天トラベル、Googleニュース等）
+            const invalidPatternCheck = this.checkInvalidPatterns(urlObj, url, title);
             if (invalidPatternCheck) {
                 return invalidPatternCheck;
             }
@@ -235,15 +237,32 @@ export class UrlValidator {
     }
 
     /**
-     * 旅行予約サイトの無効パターンをチェック
+     * 無効URLパターンをチェック（じゃらん、楽天トラベル、Googleニュース等）
      * @param {URL} urlObj - URLオブジェクト
      * @param {string} url - 元のURL文字列
      * @param {string} title - ツールのタイトル
      * @returns {Object|null} 無効パターンの場合は修正後のオブジェクト、有効ならnull
      */
-    static checkInvalidTravelSitePatterns(urlObj, url, title) {
+    static checkInvalidPatterns(urlObj, url, title) {
         const hostname = urlObj.hostname;
         const pathname = urlObj.pathname;
+
+        // Googleニュースの無効パターン検出
+        if (hostname === 'news.google.com') {
+            // /topics/ などの特殊パスは404になる可能性が高い
+            // 検索ページ(/search)とトップページ(/)のみ許可
+            const isValidPath = pathname === '/' || pathname === '' || pathname.startsWith('/search');
+
+            if (!isValidPath) {
+                console.log(`[URL検証] Googleニュースの無効パターンを検出: ${url}`);
+                console.log(`  → トップページにフォールバック: https://news.google.com/`);
+                return {
+                    url: 'https://news.google.com/',
+                    isValid: true,
+                    error: 'Googleニュース: 無効パターンを検出してトップページにフォールバック'
+                };
+            }
+        }
 
         // じゃらんの無効パターン検出
         if (hostname.includes('jalan.net')) {

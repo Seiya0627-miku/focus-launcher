@@ -279,10 +279,14 @@ class FocusLauncher {
                 MessageToast.success('修正要求が正常に処理されました！');
                 return result;
             } catch (error) {
-                console.error('Azure OpenAI API呼び出しに失敗しました:', error);
-                // APIが失敗した場合はフォールバック
+                console.error('Azure OpenAI APIエラー:', error);
+                // エラーメッセージの内容で判断
+                const isParseError = error.message.includes('解析') || error.message.includes('形式が無効');
+                const errorType = isParseError ? 'レスポンス解析失敗' : 'API接続失敗';
+
+                // フォールバック処理
                 const fallbackResult = FeedbackProcessor.processFeedback(feedbackText, this.currentWorkflow.aiContent);
-                MessageToast.warning('AI APIに接続できませんでした。ローカル処理で修正要求を処理しました。');
+                MessageToast.warning(`${errorType}: ローカル処理で修正要求を処理しました。`);
                 return fallbackResult;
             }
         } else {
